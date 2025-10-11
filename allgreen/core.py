@@ -176,15 +176,22 @@ class Check:
 
         # Check rate limiting if specified
         if self.run:
-            should_run_rate, skip_reason_rate, cached_result = self._check_rate_limit()
+            should_run_rate, skip_reason_rate, cached_result = self._check_rate_limit(environment)
             if not should_run_rate:
                 # Return cached result if we have one, otherwise create skipped result
                 if cached_result:
-                    # For rate-limited checks, we return SKIPPED status but include cached info
+                    # Use the cached result's actual status (PASSED/FAILED/ERROR)
+                    # but indicate it's cached in the message
+                    original_message = cached_result.get('message', '')
+                    cache_indicator = " (cached result)" 
+                    cached_message = f"{original_message}{cache_indicator}" if original_message else "Cached result"
+                    
                     return CheckResult(
-                        status=CheckStatus.SKIPPED,
-                        message=f"Cached result: {cached_result.get('message', 'N/A')}",
-                        skip_reason=skip_reason_rate
+                        status=CheckStatus(cached_result['status']),  # Use original status
+                        message=cached_message,
+                        error=cached_result.get('error'),
+                        duration_ms=cached_result.get('duration_ms', 0),
+                        skip_reason=None  # Not actually skipped, just cached
                     )
                 else:
                     return CheckResult(
@@ -207,7 +214,7 @@ class Check:
 
             # Cache result for rate-limited checks
             if self.run:
-                self._cache_result(result)
+                self._cache_result(result, environment)
 
             return result
 
@@ -220,7 +227,7 @@ class Check:
                 duration_ms=duration_ms
             )
             if self.run:
-                self._cache_result(result)
+                self._cache_result(result, environment)
             return result
 
         except CheckAssertionError as e:
@@ -231,7 +238,7 @@ class Check:
                 duration_ms=duration_ms
             )
             if self.run:
-                self._cache_result(result)
+                self._cache_result(result, environment)
             return result
 
         except Exception as e:
@@ -243,10 +250,10 @@ class Check:
                 duration_ms=duration_ms
             )
             if self.run:
-                self._cache_result(result)
+                self._cache_result(result, environment)
             return result
 
-    def _check_rate_limit(self) -> tuple[bool, Optional[str], Optional[dict]]:
+    def _check_rate_limit(self, environment: Optional[str] = None) -> tuple[bool, Optional[str], Optional[dict]]:
         """Check if this rate-limited check should run."""
         if not self.run:
             return True, None, None
@@ -257,12 +264,16 @@ class Check:
         try:
             config = RateLimitConfig(self.run)
             tracker = get_rate_tracker()
-            return tracker.should_run_check(self.description, config)
+            
+            # Create a namespaced key to avoid collisions between environments
+            check_key = f"{environment}::{self.description}" if environment else self.description
+            
+            return tracker.should_run_check(check_key, config)
         except ValueError:
             # Invalid rate limit pattern - run the check but log error
             return True, None, None
 
-    def _cache_result(self, result: CheckResult) -> None:
+    def _cache_result(self, result: CheckResult, environment: Optional[str] = None) -> None:
         """Cache the result of a rate-limited check."""
         if not self.run:
             return
@@ -278,7 +289,11 @@ class Check:
         }
 
         tracker = get_rate_tracker()
-        tracker.record_result(self.description, result_dict)
+        
+        # Use the same namespaced key as _check_rate_limit
+        check_key = f"{environment}::{self.description}" if environment else self.description
+        
+        tracker.record_result(check_key, result_dict)
 
 
 class CheckRegistry:
