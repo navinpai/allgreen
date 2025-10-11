@@ -53,20 +53,20 @@ class CheckTimeoutError(AllgreenError):
 def execute_with_robust_timeout(func: Callable, timeout_seconds: float) -> Any:
     """
     Execute function with robust timeout enforcement.
-    
+
     Uses worker thread execution with hard timeout that can interrupt
     most blocking operations including network calls, file I/O, etc.
-    
+
     This is more reliable than signal-based or timer-flag approaches
     for truly blocking operations.
-    
+
     Args:
         func: Function to execute
         timeout_seconds: Maximum time to allow execution
-        
+
     Returns:
         Result of func()
-        
+
     Raises:
         CheckTimeoutError: If execution exceeds timeout
         Any exception raised by func()
@@ -88,13 +88,13 @@ def execute_with_robust_timeout(func: Callable, timeout_seconds: float) -> Any:
                 return future.result(timeout=timeout_seconds)
             except FutureTimeoutError:
                 # The worker thread will be abandoned and eventually cleaned up
-                raise CheckTimeoutError(f"Check timed out after {timeout_seconds:.1f} seconds")
+                raise CheckTimeoutError(f"Check timed out after {timeout_seconds:.1f} seconds") from None
 
 
 async def execute_with_async_timeout(func: Callable, timeout_seconds: float) -> Any:
     """
     Execute function with timeout in async context (for ASGI apps like FastAPI).
-    
+
     Runs the sync function in a thread pool to avoid blocking the event loop,
     with hard timeout enforcement.
     """
@@ -114,7 +114,7 @@ async def execute_with_async_timeout(func: Callable, timeout_seconds: float) -> 
                 timeout=timeout_seconds
             )
         except asyncio.TimeoutError:
-            raise CheckTimeoutError(f"Check timed out after {timeout_seconds:.1f} seconds")
+            raise CheckTimeoutError(f"Check timed out after {timeout_seconds:.1f} seconds") from None
 
 
 @contextmanager
@@ -387,7 +387,7 @@ class CheckRegistry:
     async def run_all_async(self, environment: str = "development") -> List[tuple[Check, CheckResult]]:
         """
         Run all checks asynchronously without blocking the event loop.
-        
+
         Essential for ASGI applications like FastAPI. Each check runs in
         a worker thread with robust timeout enforcement.
         """
