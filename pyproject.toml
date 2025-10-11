@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "allgreen"
-version = "0.2.0"
+version = "0.3.0"
 description = "Simple, beautiful health checks for Python applications"
 authors = [{name = "Navin Pai", email = "lifeofnavin@gmail.com"}]
 license = {text = "MIT"}
@@ -52,6 +52,12 @@ Issues = "https://github.com/navinpai/allgreen/issues"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["allgreen*"]
+
+[tool.setuptools.package-data]
+allgreen = [
+    "templates/*.html",
+    "integrations/*.py",
+]
 
 [tool.ruff]
 line-length = 88
