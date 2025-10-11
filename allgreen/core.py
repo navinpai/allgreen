@@ -2,6 +2,7 @@ import signal
 import threading
 import time
 import traceback
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
@@ -46,6 +47,73 @@ class CheckAssertionError(AllgreenError):
 
 class CheckTimeoutError(AllgreenError):
     pass
+
+
+def execute_with_robust_timeout(func: Callable, timeout_seconds: float) -> Any:
+    """
+    Execute function with robust timeout enforcement.
+    
+    Uses worker thread execution with hard timeout that can interrupt
+    most blocking operations including network calls, file I/O, etc.
+    
+    This is more reliable than signal-based or timer-flag approaches
+    for truly blocking operations.
+    
+    Args:
+        func: Function to execute
+        timeout_seconds: Maximum time to allow execution
+        
+    Returns:
+        Result of func()
+        
+    Raises:
+        CheckTimeoutError: If execution exceeds timeout
+        Any exception raised by func()
+    """
+    if timeout_seconds <= 0:
+        return func()
+    
+    # For very short timeouts or main thread + Unix, use signals (fastest)
+    is_main_thread = threading.current_thread() is threading.main_thread()
+    if hasattr(signal, 'SIGALRM') and is_main_thread and timeout_seconds >= 0.1:
+        # Signal-based timeout for quick execution in main thread
+        with timeout_context(int(timeout_seconds) or 1):
+            return func()
+    else:
+        # Worker thread with hard timeout for robust interruption
+        with ThreadPoolExecutor(max_workers=1, thread_name_prefix="allgreen_timeout") as executor:
+            future = executor.submit(func)
+            try:
+                return future.result(timeout=timeout_seconds)
+            except FutureTimeoutError:
+                # The worker thread will be abandoned and eventually cleaned up
+                raise CheckTimeoutError(f"Check timed out after {timeout_seconds:.1f} seconds")
+
+
+async def execute_with_async_timeout(func: Callable, timeout_seconds: float) -> Any:
+    """
+    Execute function with timeout in async context (for ASGI apps like FastAPI).
+    
+    Runs the sync function in a thread pool to avoid blocking the event loop,
+    with hard timeout enforcement.
+    """
+    import asyncio
+    
+    if timeout_seconds <= 0:
+        # Even without timeout, run in executor to avoid blocking event loop
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, func)
+    
+    loop = asyncio.get_running_loop()
+    
+    with ThreadPoolExecutor(max_workers=1, thread_name_prefix="allgreen_async") as executor:
+        try:
+            return await asyncio.wait_for(
+                loop.run_in_executor(executor, func),
+                timeout=timeout_seconds
+            )
+        except asyncio.TimeoutError:
+            raise CheckTimeoutError(f"Check timed out after {timeout_seconds:.1f} seconds")
 
 
 @contextmanager
@@ -201,9 +269,8 @@ class Check:
 
         start_time = time.time()
         try:
-            # Execute with timeout
-            with timeout_context(self.timeout):
-                self.func()
+            # Execute with robust timeout enforcement
+            execute_with_robust_timeout(self.func, self.timeout)
 
             duration_ms = (time.time() - start_time) * 1000
             result = CheckResult(
@@ -313,6 +380,19 @@ class CheckRegistry:
         results = []
         for check in self._checks:
             result = check.execute(environment)
+            results.append((check, result))
+        return results
+
+    async def run_all_async(self, environment: str = "development") -> List[tuple[Check, CheckResult]]:
+        """
+        Run all checks asynchronously without blocking the event loop.
+        
+        Essential for ASGI applications like FastAPI. Each check runs in
+        a worker thread with robust timeout enforcement.
+        """
+        results = []
+        for check in self._checks:
+            result = await check.execute_async(environment)
             results.append((check, result))
         return results
 

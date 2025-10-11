@@ -97,7 +97,7 @@ async def _healthcheck_handler(
 
     load_config(config_path, environment)
     registry = get_registry()
-    results = registry.run_all(environment)
+    results = await registry.run_all_async(environment)
 
     # Calculate statistics and overall status
     stats = _calculate_stats(results)
