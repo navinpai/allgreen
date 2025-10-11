@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from flask import Flask, Response, jsonify, render_template, request
 
@@ -14,8 +14,8 @@ class HealthCheckApp:
     def __init__(
         self,
         app_name: str = "Application",
-        config_path: Optional[str] = None,
-        environment: Optional[str] = None,
+        config_path: str | None = None,
+        environment: str | None = None,
         auto_reload_config: bool = True
     ):
         self.app_name = app_name
@@ -153,10 +153,10 @@ class HealthCheckApp:
 
 def create_app(
     app_name: str = "Application",
-    config_path: Optional[str] = None,
-    environment: Optional[str] = None,
+    config_path: str | None = None,
+    environment: str | None = None,
     auto_reload_config: bool = True,
-    flask_app: Optional[Flask] = None
+    flask_app: Flask | None = None
 ) -> Flask:
     """Create and configure a Flask app with health check endpoints."""
 
@@ -194,8 +194,8 @@ def create_app(
 def mount_healthcheck(
     app: Flask,
     app_name: str = "Application",
-    config_path: Optional[str] = None,
-    environment: Optional[str] = None,
+    config_path: str | None = None,
+    environment: str | None = None,
     auto_reload_config: bool = True,
     url_prefix: str = ""
 ) -> Flask:

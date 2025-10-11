@@ -17,7 +17,6 @@ Usage:
 """
 
 from datetime import datetime
-from typing import Optional
 
 try:
     from django.http import HttpRequest, HttpResponse, JsonResponse
@@ -65,8 +64,8 @@ class HealthCheckView(View):
 def healthcheck_view(
     request: HttpRequest,
     app_name: str = "Django Application",
-    config_path: Optional[str] = None,
-    environment: Optional[str] = None
+    config_path: str | None = None,
+    environment: str | None = None
 ) -> HttpResponse:
     """
     Django function-based view for health checks.

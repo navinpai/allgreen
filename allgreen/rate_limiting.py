@@ -12,7 +12,6 @@ import re
 import threading
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
 
 DEFAULT_CACHE_DIR = Path.home() / ".allgreen" / "rate_limits"
 
@@ -50,7 +49,7 @@ class RateLimitConfig:
         else:
             raise ValueError(f"Unsupported period: {self.period}")
 
-    def get_period_start(self, now: Optional[datetime] = None) -> datetime:
+    def get_period_start(self, now: datetime | None = None) -> datetime:
         """Get the start of the current period."""
         if now is None:
             now = datetime.now()
@@ -71,7 +70,7 @@ class RateLimitConfig:
 class RateLimitTracker:
     """Thread-safe rate limit tracking with persistent storage."""
 
-    def __init__(self, cache_dir: Optional[Path] = None):
+    def __init__(self, cache_dir: Path | None = None):
         self.cache_dir = cache_dir or DEFAULT_CACHE_DIR
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()
@@ -106,8 +105,8 @@ class RateLimitTracker:
             pass
 
     def should_run_check(
-        self, check_id: str, config: RateLimitConfig, now: Optional[datetime] = None
-    ) -> tuple[bool, Optional[str], Optional[dict]]:
+        self, check_id: str, config: RateLimitConfig, now: datetime | None = None
+    ) -> tuple[bool, str | None, dict | None]:
         """
         Check if a rate-limited check should run.
 
@@ -162,7 +161,7 @@ class RateLimitTracker:
             return True, None, None
 
     def record_result(
-        self, check_id: str, result: dict, now: Optional[datetime] = None
+        self, check_id: str, result: dict, now: datetime | None = None
     ) -> None:
         """Record the result of a rate-limited check."""
         with self._lock:
@@ -171,7 +170,7 @@ class RateLimitTracker:
             self._save_state(check_id, state)
 
     def get_remaining_runs(
-        self, check_id: str, config: RateLimitConfig, now: Optional[datetime] = None
+        self, check_id: str, config: RateLimitConfig, now: datetime | None = None
     ) -> tuple[int, datetime]:
         """Get the number of remaining runs and when the limit resets."""
         if now is None:

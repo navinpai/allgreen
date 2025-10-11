@@ -2,12 +2,13 @@ import signal
 import threading
 import time
 import traceback
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeoutError
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Optional, Union
+from typing import Any
 
 
 class CheckStatus(Enum):
@@ -20,10 +21,10 @@ class CheckStatus(Enum):
 @dataclass
 class CheckResult:
     status: CheckStatus
-    message: Optional[str] = None
-    error: Optional[str] = None
-    duration_ms: Optional[float] = None
-    skip_reason: Optional[str] = None
+    message: str | None = None
+    error: str | None = None
+    duration_ms: float | None = None
+    skip_reason: str | None = None
 
     @property
     def passed(self) -> bool:
@@ -165,13 +166,13 @@ class Expectation:
                 f"Expected {self.actual!r} to equal {expected!r}"
             )
 
-    def to_be_greater_than(self, expected: Union[int, float]) -> None:
+    def to_be_greater_than(self, expected: int | float) -> None:
         if not (isinstance(self.actual, (int, float)) and self.actual > expected):
             raise CheckAssertionError(
                 f"Expected {self.actual!r} to be greater than {expected!r}"
             )
 
-    def to_be_less_than(self, expected: Union[int, float]) -> None:
+    def to_be_less_than(self, expected: int | float) -> None:
         if not (isinstance(self.actual, (int, float)) and self.actual < expected):
             raise CheckAssertionError(
                 f"Expected {self.actual!r} to be less than {expected!r}"
@@ -182,7 +183,7 @@ def expect(actual: Any) -> Expectation:
     return Expectation(actual)
 
 
-def make_sure(condition: Any, message: Optional[str] = None) -> None:
+def make_sure(condition: Any, message: str | None = None) -> None:
     if not condition:
         raise CheckAssertionError(message or f"Expected {condition!r} to be truthy")
 
@@ -192,11 +193,11 @@ class Check:
         self,
         description: str,
         func: Callable[[], None],
-        timeout: Optional[int] = None,
-        only: Optional[Union[str, list[str]]] = None,
-        except_env: Optional[Union[str, list[str]]] = None,
-        if_condition: Optional[Union[bool, Callable[[], bool]]] = None,
-        run: Optional[str] = None,
+        timeout: int | None = None,
+        only: str | list[str] | None = None,
+        except_env: str | list[str] | None = None,
+        if_condition: bool | Callable[[], bool] | None = None,
+        run: str | None = None,
     ):
         self.description = description
         self.func = func
@@ -206,14 +207,14 @@ class Check:
         self.if_condition = if_condition
         self.run = run
 
-    def _normalize_env_list(self, env: Optional[Union[str, list[str]]]) -> Optional[list[str]]:
+    def _normalize_env_list(self, env: str | list[str] | None) -> list[str] | None:
         if env is None:
             return None
         if isinstance(env, str):
             return [env]
         return env
 
-    def should_run(self, environment: str = "development") -> tuple[bool, Optional[str]]:
+    def should_run(self, environment: str = "development") -> tuple[bool, str | None]:
         # Check environment conditions
         if self.only and environment not in self.only:
             return False, f"Only runs in {', '.join(self.only)}, current: {environment}"
@@ -321,7 +322,7 @@ class Check:
                 self._cache_result(result, environment)
             return result
 
-    def _check_rate_limit(self, environment: Optional[str] = None) -> tuple[bool, Optional[str], Optional[dict]]:
+    def _check_rate_limit(self, environment: str | None = None) -> tuple[bool, str | None, dict | None]:
         """Check if this rate-limited check should run."""
         if not self.run:
             return True, None, None
@@ -341,7 +342,7 @@ class Check:
             # Invalid rate limit pattern - run the check but log error
             return True, None, None
 
-    def _cache_result(self, result: CheckResult, environment: Optional[str] = None) -> None:
+    def _cache_result(self, result: CheckResult, environment: str | None = None) -> None:
         """Cache the result of a rate-limited check."""
         if not self.run:
             return
@@ -404,11 +405,11 @@ _registry = CheckRegistry()
 
 def check(
     description: str,
-    timeout: Optional[int] = None,
-    only: Optional[Union[str, list[str]]] = None,
-    except_env: Optional[Union[str, list[str]]] = None,
-    if_condition: Optional[Union[bool, Callable[[], bool]]] = None,
-    run: Optional[str] = None,
+    timeout: int | None = None,
+    only: str | list[str] | None = None,
+    except_env: str | list[str] | None = None,
+    if_condition: bool | Callable[[], bool] | None = None,
+    run: str | None = None,
 ):
     def decorator(func: Callable[[], None]) -> Callable[[], None]:
         check_obj = Check(

@@ -20,7 +20,6 @@ Usage:
 """
 
 from datetime import datetime
-from typing import Optional
 
 try:
     from fastapi import APIRouter, Request
@@ -38,8 +37,8 @@ from ..core import CheckStatus, get_registry
 
 def create_router(
     app_name: str = "FastAPI Application",
-    config_path: Optional[str] = None,
-    environment: Optional[str] = None,
+    config_path: str | None = None,
+    environment: str | None = None,
     prefix: str = ""
 ) -> APIRouter:
     """
@@ -69,8 +68,8 @@ def create_router(
 async def healthcheck_endpoint(
     request: Request = None,
     app_name: str = "FastAPI Application",
-    config_path: Optional[str] = None,
-    environment: Optional[str] = None
+    config_path: str | None = None,
+    environment: str | None = None
 ):
     """
     Standalone FastAPI health check endpoint.
@@ -84,10 +83,10 @@ async def healthcheck_endpoint(
 
 
 async def _healthcheck_handler(
-    request: Optional[Request],
+    request: Request | None,
     app_name: str,
-    config_path: Optional[str],
-    environment: Optional[str]
+    config_path: str | None,
+    environment: str | None
 ):
     """Internal handler for health check logic."""
 
