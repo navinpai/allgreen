@@ -7,7 +7,7 @@ from concurrent.futures import TimeoutError as FutureTimeoutError
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, List, Optional, Union
+from typing import Any, Callable, List, Optional, Tuple, Union
 
 
 class CheckStatus(Enum):
@@ -213,7 +213,7 @@ class Check:
             return [env]
         return env
 
-    def should_run(self, environment: str = "development") -> tuple[bool, Optional[str]]:
+    def should_run(self, environment: str = "development") -> Tuple[bool, Optional[str]]:
         # Check environment conditions
         if self.only and environment not in self.only:
             return False, f"Only runs in {', '.join(self.only)}, current: {environment}"
@@ -321,7 +321,7 @@ class Check:
                 self._cache_result(result, environment)
             return result
 
-    def _check_rate_limit(self, environment: Optional[str] = None) -> tuple[bool, Optional[str], Optional[dict]]:
+    def _check_rate_limit(self, environment: Optional[str] = None) -> Tuple[bool, Optional[str], Optional[dict]]:
         """Check if this rate-limited check should run."""
         if not self.run:
             return True, None, None
@@ -377,14 +377,14 @@ class CheckRegistry:
     def clear(self) -> None:
         self._checks.clear()
 
-    def run_all(self, environment: str = "development") -> List[tuple[Check, CheckResult]]:
+    def run_all(self, environment: str = "development") -> List[Tuple[Check, CheckResult]]:
         results = []
         for check in self._checks:
             result = check.execute(environment)
             results.append((check, result))
         return results
 
-    async def run_all_async(self, environment: str = "development") -> List[tuple[Check, CheckResult]]:
+    async def run_all_async(self, environment: str = "development") -> List[Tuple[Check, CheckResult]]:
         """
         Run all checks asynchronously without blocking the event loop.
 
