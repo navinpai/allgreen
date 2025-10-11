@@ -4,9 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "allgreen"
-version = "0.1.0"
+version = "0.2.0"
 description = "Simple, beautiful health checks for Python applications"
-authors = [{name = "Navin Pai", email = "navin@example.com"}]
+authors = [{name = "Navin Pai", email = "lifeofnavin@gmail.com"}]
 license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.8"
@@ -21,16 +21,27 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
-dependencies = [
+dependencies = []
+
+[project.optional-dependencies]
+flask = [
     "flask>=2.0.0",
     "jinja2>=3.0.0",
 ]
-
-[project.optional-dependencies]
+django = [
+    "django>=3.2",
+]
+fastapi = [
+    "fastapi>=0.68.0",
+    "uvicorn>=0.15.0",
+    "jinja2>=3.0.0",  # For templates
+]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov",
     "ruff",
+    "flask>=2.0.0",  # For testing
+    "jinja2>=3.0.0",
 ]
 
 [project.urls]

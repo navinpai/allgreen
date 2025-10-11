@@ -12,9 +12,10 @@ from .core import (
     get_registry,
     make_sure,
 )
-from .web import HealthCheckApp, create_app, mount_healthcheck, run_standalone
 
 __version__ = "0.1.0"
+
+# Core exports (always available)
 __all__ = [
     "check",
     "expect",
@@ -30,8 +31,28 @@ __all__ = [
     "load_config",
     "find_config",
     "ConfigLoader",
-    "create_app",
-    "mount_healthcheck",
-    "run_standalone",
-    "HealthCheckApp",
 ]
+
+# Try to import web framework integrations (optional)
+try:
+    from .integrations.flask_integration import HealthCheckApp, create_app, mount_healthcheck, run_standalone
+    __all__.extend([
+        "create_app",
+        "mount_healthcheck", 
+        "run_standalone",
+        "HealthCheckApp",
+    ])
+except ImportError:
+    pass
+
+try:
+    from .integrations import django_integration
+    __all__.append("django_integration")
+except ImportError:
+    pass
+
+try:
+    from .integrations import fastapi_integration
+    __all__.append("fastapi_integration")
+except ImportError:
+    pass
