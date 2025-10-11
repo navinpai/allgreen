@@ -23,9 +23,23 @@ Perfect for monitoring application health, smoke testing, and ensuring your serv
 
 ## 📦 Installation
 
+Choose the installation that fits your needs:
+
 ```bash
+# Core functionality only (no web dependencies)
 pip install allgreen
+
+# With Flask integration
+pip install allgreen[flask]
+
+# With Django integration  
+pip install allgreen[django]
+
+# With FastAPI integration
+pip install allgreen[fastapi]
 ```
+
+**Framework-agnostic design** - use only what you need! 🎯
 
 ## 🎯 Quick Start
 
@@ -52,32 +66,53 @@ def disk_space_check():
     expect(usage_percent).to_be_less_than(90)
 ```
 
-### 2. Add to your web application
+### 2. Add to your application
 
-**Flask:**
+**Core Only (no web framework):**
+```python
+from allgreen import get_registry, load_config
+
+load_config()
+results = get_registry().run_all()
+# Process results as needed
+```
+
+**Flask Integration:**
+```bash
+pip install allgreen[flask]
+```
 ```python
 from flask import Flask
-from allgreen import mount_healthcheck
+from allgreen.integrations.flask_integration import mount_healthcheck
 
 app = Flask(__name__)
 mount_healthcheck(app, app_name="My API")
 ```
 
-**Django:** Add to `urls.py`
+**Django Integration:**
+```bash
+pip install allgreen[django]
+```
 ```python
-from allgreen import create_app
-from django.urls import path, include
+# urls.py
+from django.urls import path
+from allgreen.integrations.django_integration import healthcheck_view
 
-healthcheck_app = create_app(app_name="My Django App")
 urlpatterns = [
-    path('healthcheck/', include(healthcheck_app)),
+    path('healthcheck/', healthcheck_view, name='healthcheck'),
 ]
 ```
 
-**Standalone:**
+**FastAPI Integration:**
+```bash
+pip install allgreen[fastapi]
+```
 ```python
-from allgreen import run_standalone
-run_standalone(app_name="My Service", port=8080)
+from fastapi import FastAPI
+from allgreen.integrations.fastapi_integration import create_router
+
+app = FastAPI()
+app.include_router(create_router(app_name="My API"))
 ```
 
 ### 3. View your dashboard
@@ -205,7 +240,7 @@ Perfect for integration with monitoring tools like:
 ### Flask Application
 ```python
 from flask import Flask
-from allgreen import mount_healthcheck
+from allgreen.integrations.flask_integration import mount_healthcheck
 
 app = Flask(__name__)
 
@@ -223,51 +258,60 @@ if __name__ == '__main__':
 
 ### Django Integration
 ```python
-# health/urls.py
-from allgreen import create_app
+# urls.py
+from django.urls import path
+from allgreen.integrations.django_integration import healthcheck_view
 
-healthcheck_app = create_app(
+urlpatterns = [
+    path('healthcheck/', healthcheck_view, name='healthcheck'),
+]
+
+# For custom configuration
+from allgreen.integrations.django_integration import create_healthcheck_view
+
+custom_view = create_healthcheck_view(
     app_name="My Django App",
-    config_path="myapp/health_checks.py"
+    config_path="myapp/health_checks.py",
+    environment="production"
 )
 
-# main/urls.py  
 urlpatterns = [
-    path('health/', include('health.urls')),
+    path('health/', custom_view, name='healthcheck'),
 ]
 ```
 
 ### FastAPI Integration
 ```python
 from fastapi import FastAPI
-from allgreen import create_app
+from allgreen.integrations.fastapi_integration import create_router
 
 app = FastAPI()
-healthcheck_app = create_app(app_name="My FastAPI")
 
-app.mount("/health", healthcheck_app)
-```
+# Method 1: Mount router
+health_router = create_router(
+    app_name="My FastAPI",
+    config_path="config/allgood.py"
+)
+app.include_router(health_router)
 
-### Standalone Server
-```python
-from allgreen import run_standalone
+# Method 2: Individual endpoint
+from allgreen.integrations.fastapi_integration import healthcheck_endpoint
 
-if __name__ == "__main__":
-    run_standalone(
-        app_name="Health Check Service",
-        config_path="checks/allgood.py", 
-        host="0.0.0.0",
-        port=8080,
-        environment="production"
-    )
+@app.get("/healthcheck")
+async def health(request: Request):
+    return await healthcheck_endpoint(request, app_name="My FastAPI")
 ```
 
 ## 📁 Examples
 
 Check out the `examples/` directory for complete working examples:
 
-- **[`examples/allgood.py`](examples/allgood.py)** - Basic health checks
+- **[`examples/allgood.py`](examples/allgood.py)** - Basic health checks configuration
 - **[`examples/advanced_allgood.py`](examples/advanced_allgood.py)** - Advanced features (timeouts, rate limiting)
+- **[`examples/core_only_example.py`](examples/core_only_example.py)** - Core-only usage (no web dependencies)
+- **[`examples/flask_example.py`](examples/flask_example.py)** - Flask integration example
+- **[`examples/django_example.py`](examples/django_example.py)** - Django integration example  
+- **[`examples/fastapi_example.py`](examples/fastapi_example.py)** - FastAPI integration example
 
 ## 🧪 Configuration File Locations
 
