@@ -183,9 +183,9 @@ class Check:
                     # Use the cached result's actual status (PASSED/FAILED/ERROR)
                     # but indicate it's cached in the message
                     original_message = cached_result.get('message', '')
-                    cache_indicator = " (cached result)" 
+                    cache_indicator = " (cached result)"
                     cached_message = f"{original_message}{cache_indicator}" if original_message else "Cached result"
-                    
+
                     return CheckResult(
                         status=CheckStatus(cached_result['status']),  # Use original status
                         message=cached_message,
@@ -264,10 +264,10 @@ class Check:
         try:
             config = RateLimitConfig(self.run)
             tracker = get_rate_tracker()
-            
+
             # Create a namespaced key to avoid collisions between environments
             check_key = f"{environment}::{self.description}" if environment else self.description
-            
+
             return tracker.should_run_check(check_key, config)
         except ValueError:
             # Invalid rate limit pattern - run the check but log error
@@ -289,10 +289,10 @@ class Check:
         }
 
         tracker = get_rate_tracker()
-        
+
         # Use the same namespaced key as _check_rate_limit
         check_key = f"{environment}::{self.description}" if environment else self.description
-        
+
         tracker.record_result(check_key, result_dict)
 
 
