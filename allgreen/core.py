@@ -2,7 +2,8 @@ import signal
 import threading
 import time
 import traceback
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeoutError
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
@@ -72,7 +73,7 @@ def execute_with_robust_timeout(func: Callable, timeout_seconds: float) -> Any:
     """
     if timeout_seconds <= 0:
         return func()
-    
+
     # For very short timeouts or main thread + Unix, use signals (fastest)
     is_main_thread = threading.current_thread() is threading.main_thread()
     if hasattr(signal, 'SIGALRM') and is_main_thread and timeout_seconds >= 0.1:
@@ -98,14 +99,14 @@ async def execute_with_async_timeout(func: Callable, timeout_seconds: float) -> 
     with hard timeout enforcement.
     """
     import asyncio
-    
+
     if timeout_seconds <= 0:
         # Even without timeout, run in executor to avoid blocking event loop
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, func)
-    
+
     loop = asyncio.get_running_loop()
-    
+
     with ThreadPoolExecutor(max_workers=1, thread_name_prefix="allgreen_async") as executor:
         try:
             return await asyncio.wait_for(
