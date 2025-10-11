@@ -1,7 +1,8 @@
 import os
 import tempfile
 
-from allgreen import create_app, get_registry
+from allgreen import get_registry
+from allgreen.integrations.flask_integration import create_app
 
 
 def test_healthcheck_html_endpoint():
