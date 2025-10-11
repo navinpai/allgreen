@@ -53,7 +53,7 @@ def timeout_context(seconds: int):
     """Context manager for timing out function execution."""
     # Check if we're in the main thread and signals are available
     is_main_thread = threading.current_thread() is threading.main_thread()
-    
+
     if hasattr(signal, 'SIGALRM') and is_main_thread:
         # Unix systems in main thread - use signals (more reliable)
         def timeout_handler(signum, frame):

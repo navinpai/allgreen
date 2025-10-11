@@ -4,15 +4,15 @@ FastAPI integration for allgreen health checks.
 Usage:
     from fastapi import FastAPI
     from allgreen.integrations import fastapi_integration
-    
+
     app = FastAPI()
-    
+
     # Method 1: Mount the router
     app.include_router(
         fastapi_integration.create_router(app_name="My FastAPI App"),
         prefix="/health"
     )
-    
+
     # Method 2: Add individual route
     @app.get("/healthcheck")
     async def health():
@@ -23,15 +23,14 @@ from datetime import datetime
 from typing import Optional
 
 try:
-    from fastapi import APIRouter, Request, HTTPException
+    from fastapi import APIRouter, Request
     from fastapi.responses import HTMLResponse, JSONResponse
-    from fastapi.templating import Jinja2Templates
     from jinja2 import Template
 except ImportError:
     raise ImportError(
         "FastAPI and Jinja2 are required for fastapi_integration. "
         "Install with: pip install allgreen[fastapi]"
-    )
+    ) from None
 
 from ..config import load_config
 from ..core import CheckStatus, get_registry
@@ -45,37 +44,37 @@ def create_router(
 ) -> APIRouter:
     """
     Create a FastAPI router with health check endpoints.
-    
+
     Args:
         app_name: Application name to display
-        config_path: Path to allgood.py config file  
+        config_path: Path to allgood.py config file
         environment: Environment name
         prefix: URL prefix for routes
-        
+
     Returns:
         APIRouter with /healthcheck and /healthcheck.json endpoints
     """
     router = APIRouter()
-    
+
     @router.get("/healthcheck", response_class=HTMLResponse)
     @router.get("/healthcheck.json", response_class=JSONResponse)
     async def healthcheck_endpoint(request: Request):
         return await _healthcheck_handler(
             request, app_name, config_path, environment
         )
-    
+
     return router
 
 
 async def healthcheck_endpoint(
     request: Request = None,
-    app_name: str = "FastAPI Application", 
+    app_name: str = "FastAPI Application",
     config_path: Optional[str] = None,
     environment: Optional[str] = None
 ):
     """
     Standalone FastAPI health check endpoint.
-    
+
     Can be used directly as a route handler:
         @app.get("/healthcheck")
         async def health(request: Request):
@@ -91,33 +90,33 @@ async def _healthcheck_handler(
     environment: Optional[str]
 ):
     """Internal handler for health check logic."""
-    
+
     # Load configuration and run checks
     if environment is None:
         environment = "development"
-    
+
     load_config(config_path, environment)
     registry = get_registry()
     results = registry.run_all(environment)
-    
+
     # Calculate statistics and overall status
     stats = _calculate_stats(results)
     overall_status = _get_overall_status(stats)
-    
+
     # Determine response format
     wants_json = False
     if request:
         accept_header = request.headers.get("accept", "")
         format_param = request.query_params.get("format")
         wants_json = (
-            "application/json" in accept_header or 
+            "application/json" in accept_header or
             format_param == "json" or
             request.url.path.endswith(".json")
         )
-    
+
     # Determine HTTP status code
     status_code = 200 if overall_status == "passed" else 503
-    
+
     if wants_json:
         # Return JSON response
         response_data = _format_json_response(
@@ -134,7 +133,7 @@ async def _healthcheck_handler(
             'environment': environment,
             'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
-        
+
         html_content = _render_html_template(context)
         return HTMLResponse(content=html_content, status_code=status_code)
 
@@ -148,7 +147,7 @@ def _calculate_stats(results):
         "skipped": 0,
         "error": 0
     }
-    
+
     for _, result in results:
         if result.status == CheckStatus.PASSED:
             stats["passed"] += 1
@@ -158,10 +157,10 @@ def _calculate_stats(results):
             stats["skipped"] += 1
         elif result.status == CheckStatus.ERROR:
             stats["error"] += 1
-    
+
     # Combine failed and error for simpler display
     stats["failed"] += stats["error"]
-    
+
     return stats
 
 
@@ -189,7 +188,7 @@ def _format_json_response(results, stats, overall_status, app_name, environment)
             "duration_ms": result.duration_ms,
             "skip_reason": result.skip_reason,
         })
-    
+
     return {
         "status": overall_status,
         "stats": stats,
@@ -233,7 +232,7 @@ def _get_html_template():
         <p>Status: <strong>{{ overall_status }}</strong></p>
         <p>Environment: {{ environment }} | {{ timestamp }}</p>
     </div>
-    
+
     <div class="summary">
         <div class="summary-item">
             <div style="font-size: 2rem; color: green;">{{ stats.passed }}</div>
@@ -248,7 +247,7 @@ def _get_html_template():
             <div>Skipped</div>
         </div>
     </div>
-    
+
     <h2>Detailed Results</h2>
     <ul>
     {% for check, result in results %}

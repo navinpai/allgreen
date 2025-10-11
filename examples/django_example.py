@@ -18,8 +18,6 @@ Run:
 """
 
 import os
-import sys
-from pathlib import Path
 
 # Minimal Django setup for this example
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', '__main__')
@@ -51,10 +49,10 @@ TEMPLATES = [
 if __name__ == '__main__':
     import django
     from django.conf import settings
+    from django.core.management import execute_from_command_line
     from django.http import HttpResponse
     from django.urls import path
-    from django.core.management import execute_from_command_line
-    
+
     # Configure Django
     settings.configure(
         DEBUG=DEBUG,
@@ -65,10 +63,10 @@ if __name__ == '__main__':
         TEMPLATES=TEMPLATES,
     )
     django.setup()
-    
+
     # Import after Django setup
     from allgreen.integrations.django_integration import healthcheck_view
-    
+
     # Views
     def index(request):
         return HttpResponse('''
@@ -76,18 +74,18 @@ if __name__ == '__main__':
         <p><a href="/healthcheck/">View Health Checks</a></p>
         <p><a href="/healthcheck/?format=json">JSON API</a></p>
         ''')
-    
+
     # URL patterns
     urlpatterns = [
         path('', index),
         path('healthcheck/', healthcheck_view, name='healthcheck'),
     ]
-    
+
     print("🚀 Django + Allgreen Example")
     print("📋 Health checks: http://localhost:8000/healthcheck/")
     print("🔧 JSON API: http://localhost:8000/healthcheck/?format=json")
     print("💡 Using config: examples/allgood.py")
     print()
-    
+
     # Run Django dev server
     execute_from_command_line(['manage.py', 'runserver', '8000'])

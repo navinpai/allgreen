@@ -12,8 +12,10 @@ Run:
     python examples/core_only_example.py
 """
 
-from allgreen import check, expect, make_sure, get_registry, load_config
 import json
+
+from allgreen import check, expect, get_registry, load_config, make_sure
+
 
 # Define some health checks directly in code
 @check("System has enough memory")
@@ -40,13 +42,13 @@ def run_health_checks():
     # Load additional checks from config file (if available)
     try:
         load_config("examples/allgood.py", "development")
-    except:
+    except Exception:
         print("💡 No config file found, using inline checks only")
-    
+
     # Get all registered checks
     registry = get_registry()
     results = registry.run_all("development")
-    
+
     return results
 
 def print_results_table(results):
@@ -54,10 +56,10 @@ def print_results_table(results):
     print("\n" + "="*80)
     print(f"{'STATUS':<10} {'DURATION':<10} {'DESCRIPTION':<30} {'MESSAGE'}")
     print("="*80)
-    
+
     passed = failed = skipped = 0
-    
-    for check, result in results:
+
+    for check_obj, result in results:
         # Status icon and counts
         if result.passed:
             status_icon = "✅ PASS"
@@ -70,19 +72,19 @@ def print_results_table(results):
             skipped += 1
         else:
             status_icon = "⚠️ UNKN"
-        
+
         # Duration
         duration = f"{result.duration_ms:.1f}ms" if result.duration_ms else "N/A"
-        
+
         # Message
         message = ""
         if result.skip_reason:
             message = f"Skipped: {result.skip_reason}"
         elif result.message and not result.passed:
             message = result.message[:40] + "..." if len(result.message) > 40 else result.message
-        
-        print(f"{status_icon:<10} {duration:<10} {check.description[:30]:<30} {message}")
-    
+
+        print(f"{status_icon:<10} {duration:<10} {check_obj.description[:30]:<30} {message}")
+
     print("="*80)
     print(f"Summary: {passed} passed, {failed} failed, {skipped} skipped")
     return passed, failed, skipped
@@ -90,9 +92,9 @@ def print_results_table(results):
 def export_json_results(results, filename="health_check_results.json"):
     """Export results to JSON file."""
     json_results = []
-    for check, result in results:
+    for check_obj, result in results:
         json_results.append({
-            "description": check.description,
+            "description": check_obj.description,
             "status": result.status.value,
             "passed": result.passed,
             "message": result.message,
@@ -100,35 +102,35 @@ def export_json_results(results, filename="health_check_results.json"):
             "duration_ms": result.duration_ms,
             "skip_reason": result.skip_reason,
         })
-    
+
     output = {
         "timestamp": "2023-01-01 12:00:00",  # Would use real timestamp
         "environment": "development",
         "total_checks": len(results),
         "results": json_results
     }
-    
+
     with open(filename, 'w') as f:
         json.dump(output, f, indent=2)
-    
+
     print(f"📄 Results exported to {filename}")
 
 if __name__ == '__main__':
     print("🚀 Allgreen Core-Only Example")
     print("💡 No web framework dependencies required!")
     print("\nRunning health checks...")
-    
+
     # Run the checks
     results = run_health_checks()
-    
+
     # Display results in table format
     passed, failed, skipped = print_results_table(results)
-    
+
     # Export to JSON
     export_json_results(results)
-    
+
     # Exit with appropriate code for CI/CD
     exit_code = 0 if failed == 0 else 1
     print(f"\n🎯 Exit code: {exit_code} ({'success' if exit_code == 0 else 'failure'})")
-    
+
     exit(exit_code)

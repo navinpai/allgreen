@@ -11,11 +11,14 @@ Run:
     # Or try http://localhost:8000/docs for OpenAPI docs
 """
 
+import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
-import uvicorn
 
-from allgreen.integrations.fastapi_integration import create_router, healthcheck_endpoint
+from allgreen.integrations.fastapi_integration import (
+    create_router,
+    healthcheck_endpoint,
+)
 
 # Create FastAPI app
 app = FastAPI(
@@ -56,11 +59,11 @@ async def health_check(request: Request):
 if __name__ == '__main__':
     print("🚀 FastAPI + Allgreen Example")
     print("📋 Health checks: http://localhost:8000/healthcheck")
-    print("🔧 JSON API: http://localhost:8000/healthcheck.json") 
+    print("🔧 JSON API: http://localhost:8000/healthcheck.json")
     print("📚 OpenAPI docs: http://localhost:8000/docs")
     print("💡 Using config: examples/allgood.py")
     print()
-    
+
     # Run with uvicorn
     uvicorn.run(
         "fastapi_example:app",

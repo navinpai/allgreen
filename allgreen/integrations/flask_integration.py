@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from flask import Flask, Response, jsonify, render_template, request
 
 import allgreen
+
 from ..config import load_config
 from ..core import Check, CheckResult, CheckStatus, get_registry
 
