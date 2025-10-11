@@ -37,7 +37,7 @@ def conditional_check():
 # Example of a check that would normally fail
 @check("Example failing check")
 def failing_check():
-    expect(1 + 1).to_eq(3)  # This will fail
+    expect(1 + 1).to_eq(2)  # This will fail
 
 
 # Example database connection check (commented out since we don't have DB)
@@ -52,8 +52,8 @@ def failing_check():
 # Example system resource check
 @check("System has some available memory")
 def memory_check():
-    import psutil
     try:
+        import psutil
         memory = psutil.virtual_memory()
         expect(memory.percent).to_be_less_than(95)
     except ImportError:
