@@ -7,7 +7,7 @@ from concurrent.futures import TimeoutError as FutureTimeoutError
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, List, Optional, Tuple, Union
+from typing import Any, Callable, Optional, Union
 
 
 class CheckStatus(Enum):
@@ -193,8 +193,8 @@ class Check:
         description: str,
         func: Callable[[], None],
         timeout: Optional[int] = None,
-        only: Optional[Union[str, List[str]]] = None,
-        except_env: Optional[Union[str, List[str]]] = None,
+        only: Optional[Union[str, list[str]]] = None,
+        except_env: Optional[Union[str, list[str]]] = None,
         if_condition: Optional[Union[bool, Callable[[], bool]]] = None,
         run: Optional[str] = None,
     ):
@@ -206,14 +206,14 @@ class Check:
         self.if_condition = if_condition
         self.run = run
 
-    def _normalize_env_list(self, env: Optional[Union[str, List[str]]]) -> Optional[List[str]]:
+    def _normalize_env_list(self, env: Optional[Union[str, list[str]]]) -> Optional[list[str]]:
         if env is None:
             return None
         if isinstance(env, str):
             return [env]
         return env
 
-    def should_run(self, environment: str = "development") -> Tuple[bool, Optional[str]]:
+    def should_run(self, environment: str = "development") -> tuple[bool, Optional[str]]:
         # Check environment conditions
         if self.only and environment not in self.only:
             return False, f"Only runs in {', '.join(self.only)}, current: {environment}"
@@ -321,7 +321,7 @@ class Check:
                 self._cache_result(result, environment)
             return result
 
-    def _check_rate_limit(self, environment: Optional[str] = None) -> Tuple[bool, Optional[str], Optional[dict]]:
+    def _check_rate_limit(self, environment: Optional[str] = None) -> tuple[bool, Optional[str], Optional[dict]]:
         """Check if this rate-limited check should run."""
         if not self.run:
             return True, None, None
@@ -366,25 +366,25 @@ class Check:
 
 class CheckRegistry:
     def __init__(self):
-        self._checks: List[Check] = []
+        self._checks: list[Check] = []
 
     def register(self, check: Check) -> None:
         self._checks.append(check)
 
-    def get_checks(self) -> List[Check]:
+    def get_checks(self) -> list[Check]:
         return self._checks.copy()
 
     def clear(self) -> None:
         self._checks.clear()
 
-    def run_all(self, environment: str = "development") -> List[Tuple[Check, CheckResult]]:
+    def run_all(self, environment: str = "development") -> list[tuple[Check, CheckResult]]:
         results = []
         for check in self._checks:
             result = check.execute(environment)
             results.append((check, result))
         return results
 
-    async def run_all_async(self, environment: str = "development") -> List[Tuple[Check, CheckResult]]:
+    async def run_all_async(self, environment: str = "development") -> list[tuple[Check, CheckResult]]:
         """
         Run all checks asynchronously without blocking the event loop.
 
@@ -405,8 +405,8 @@ _registry = CheckRegistry()
 def check(
     description: str,
     timeout: Optional[int] = None,
-    only: Optional[Union[str, List[str]]] = None,
-    except_env: Optional[Union[str, List[str]]] = None,
+    only: Optional[Union[str, list[str]]] = None,
+    except_env: Optional[Union[str, list[str]]] = None,
     if_condition: Optional[Union[bool, Callable[[], bool]]] = None,
     run: Optional[str] = None,
 ):

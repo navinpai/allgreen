@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 from flask import Flask, Response, jsonify, render_template, request
 
@@ -45,7 +45,7 @@ class HealthCheckApp:
 
         return True
 
-    def _calculate_stats(self, results: List[Tuple[Check, CheckResult]]) -> Dict[str, int]:
+    def _calculate_stats(self, results: list[tuple[Check, CheckResult]]) -> dict[str, int]:
         """Calculate statistics from check results."""
         stats = {
             "total": len(results),
@@ -70,7 +70,7 @@ class HealthCheckApp:
 
         return stats
 
-    def _get_overall_status(self, stats: Dict[str, int]) -> str:
+    def _get_overall_status(self, stats: dict[str, int]) -> str:
         """Determine overall health status."""
         if stats["failed"] > 0:
             return "failed"
@@ -81,7 +81,7 @@ class HealthCheckApp:
         else:
             return "unknown"
 
-    def run_health_checks(self) -> Tuple[List[Tuple[Check, CheckResult]], Dict[str, Any]]:
+    def run_health_checks(self) -> tuple[list[tuple[Check, CheckResult]], dict[str, Any]]:
         """Run all health checks and return results with metadata."""
         # Reload config if needed
         self._load_config()
@@ -104,7 +104,7 @@ class HealthCheckApp:
 
         return results, metadata
 
-    def healthcheck_html(self) -> Tuple[str, int]:
+    def healthcheck_html(self) -> tuple[str, int]:
         """Generate HTML health check page."""
         results, metadata = self.run_health_checks()
 
@@ -120,7 +120,7 @@ class HealthCheckApp:
 
         return html, status_code
 
-    def healthcheck_json(self) -> Tuple[Dict[str, Any], int]:
+    def healthcheck_json(self) -> tuple[dict[str, Any], int]:
         """Generate JSON health check response."""
         results, metadata = self.run_health_checks()
 

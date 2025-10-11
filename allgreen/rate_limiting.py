@@ -12,7 +12,7 @@ import re
 import threading
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Optional
 
 DEFAULT_CACHE_DIR = Path.home() / ".allgreen" / "rate_limits"
 
@@ -24,7 +24,7 @@ class RateLimitConfig:
         self.pattern = run_pattern
         self.count, self.period = self._parse_pattern(run_pattern)
 
-    def _parse_pattern(self, pattern: str) -> Tuple[int, str]:
+    def _parse_pattern(self, pattern: str) -> tuple[int, str]:
         """Parse patterns like '2 times per day' into (2, 'day')."""
         # Normalize the pattern
         pattern = pattern.lower().strip()
@@ -82,7 +82,7 @@ class RateLimitTracker:
         safe_id = re.sub(r'[^\w\-_.]', '_', check_id)
         return self.cache_dir / f"{safe_id}.pkl"
 
-    def _load_state(self, check_id: str) -> Dict:
+    def _load_state(self, check_id: str) -> dict:
         """Load the rate limit state from disk."""
         cache_file = self._get_cache_file(check_id)
         if not cache_file.exists():
@@ -95,7 +95,7 @@ class RateLimitTracker:
             # If cache is corrupted, start fresh
             return {"count": 0, "period_start": None, "last_result": None}
 
-    def _save_state(self, check_id: str, state: Dict) -> None:
+    def _save_state(self, check_id: str, state: dict) -> None:
         """Save the rate limit state to disk."""
         cache_file = self._get_cache_file(check_id)
         try:
@@ -107,7 +107,7 @@ class RateLimitTracker:
 
     def should_run_check(
         self, check_id: str, config: RateLimitConfig, now: Optional[datetime] = None
-    ) -> Tuple[bool, Optional[str], Optional[dict]]:
+    ) -> tuple[bool, Optional[str], Optional[dict]]:
         """
         Check if a rate-limited check should run.
 
@@ -172,7 +172,7 @@ class RateLimitTracker:
 
     def get_remaining_runs(
         self, check_id: str, config: RateLimitConfig, now: Optional[datetime] = None
-    ) -> Tuple[int, datetime]:
+    ) -> tuple[int, datetime]:
         """Get the number of remaining runs and when the limit resets."""
         if now is None:
             now = datetime.now()
