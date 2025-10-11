@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 from typing import Any
 
-from flask import Flask, Response, jsonify, render_template, request
+from flask import Blueprint, Flask, Response, jsonify, render_template, request
 
 import allgreen
 
@@ -104,7 +104,7 @@ class HealthCheckApp:
 
         return results, metadata
 
-    def healthcheck_html(self) -> tuple[str, int]:
+    def healthcheck_html(self) -> tuple[str, int, dict[str, str]]:
         """Generate HTML health check page."""
         results, metadata = self.run_health_checks()
 
@@ -118,9 +118,12 @@ class HealthCheckApp:
             **metadata
         )
 
-        return html, status_code
+        # Add Cache-Control headers
+        headers = {"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"}
 
-    def healthcheck_json(self) -> tuple[dict[str, Any], int]:
+        return html, status_code, headers
+
+    def healthcheck_json(self) -> tuple[dict[str, Any], int, dict[str, str]]:
         """Generate JSON health check response."""
         results, metadata = self.run_health_checks()
 
@@ -148,7 +151,63 @@ class HealthCheckApp:
         # Determine HTTP status code
         status_code = 200 if metadata["overall_status"] == "passed" else 503
 
-        return response_data, status_code
+        # Add Cache-Control headers
+        headers = {"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"}
+
+        return response_data, status_code, headers
+
+
+def create_healthcheck_blueprint(
+    app_name: str = "Application",
+    config_path: str | None = None,
+    environment: str | None = None,
+    auto_reload_config: bool = True,
+    url_prefix: str | None = None
+) -> Blueprint:
+    """Create a Blueprint with health check endpoints."""
+    
+    # Create blueprint
+    blueprint = Blueprint(
+        'healthcheck', 
+        __name__, 
+        template_folder=os.path.join(os.path.dirname(allgreen.__file__), 'templates'),
+        url_prefix=url_prefix
+    )
+
+    # Create health check instance
+    health_checker = HealthCheckApp(
+        app_name=app_name,
+        config_path=config_path,
+        environment=environment,
+        auto_reload_config=auto_reload_config
+    )
+
+    @blueprint.route("/healthcheck")
+    def healthcheck():
+        """Health check endpoint that returns HTML by default, JSON if requested."""
+        accept_header = request.headers.get("Accept", "")
+        if "application/json" in accept_header or request.args.get("format") == "json":
+            data, status_code, headers = health_checker.healthcheck_json()
+            response = jsonify(data)
+            response.status_code = status_code
+            response.headers.update(headers)
+            return response
+        else:
+            html, status_code, headers = health_checker.healthcheck_html()
+            response = Response(html, status=status_code, mimetype="text/html")
+            response.headers.update(headers)
+            return response
+
+    @blueprint.route("/healthcheck.json")
+    def healthcheck_json():
+        """Explicit JSON health check endpoint."""
+        data, status_code, headers = health_checker.healthcheck_json()
+        response = jsonify(data)
+        response.status_code = status_code
+        response.headers.update(headers)
+        return response
+
+    return blueprint
 
 
 def create_app(
@@ -163,30 +222,14 @@ def create_app(
     if flask_app is None:
         flask_app = Flask(__name__, template_folder=os.path.join(os.path.dirname(allgreen.__file__), 'templates'))
 
-    # Create health check instance
-    health_checker = HealthCheckApp(
+    # Create and register blueprint
+    blueprint = create_healthcheck_blueprint(
         app_name=app_name,
         config_path=config_path,
         environment=environment,
         auto_reload_config=auto_reload_config
     )
-
-    @flask_app.route("/healthcheck")
-    def healthcheck():
-        """Health check endpoint that returns HTML by default, JSON if requested."""
-        accept_header = request.headers.get("Accept", "")
-        if "application/json" in accept_header or request.args.get("format") == "json":
-            data, status_code = health_checker.healthcheck_json()
-            return jsonify(data), status_code
-        else:
-            html, status_code = health_checker.healthcheck_html()
-            return Response(html, status=status_code, mimetype="text/html")
-
-    @flask_app.route("/healthcheck.json")
-    def healthcheck_json():
-        """Explicit JSON health check endpoint."""
-        data, status_code = health_checker.healthcheck_json()
-        return jsonify(data), status_code
+    flask_app.register_blueprint(blueprint)
 
     return flask_app
 
@@ -197,20 +240,21 @@ def mount_healthcheck(
     config_path: str | None = None,
     environment: str | None = None,
     auto_reload_config: bool = True,
-    url_prefix: str = ""
+    url_prefix: str | None = None
 ) -> Flask:
     """Mount health check routes on an existing Flask app."""
 
-    # Create health check app
-    health_app = create_app(
+    # Create and register blueprint
+    blueprint = create_healthcheck_blueprint(
         app_name=app_name,
         config_path=config_path,
         environment=environment,
         auto_reload_config=auto_reload_config,
-        flask_app=app
+        url_prefix=url_prefix
     )
+    app.register_blueprint(blueprint)
 
-    return health_app
+    return app
 
 
 # For standalone usage
