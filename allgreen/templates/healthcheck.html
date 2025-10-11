@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Check - {{ app_name or "Application" }}</title>
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --card-bg: #f8f9fa;
+            --border-color: #dee2e6;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --warning-color: #ffc107;
+            --skip-color: #6c757d;
+            --shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #1a1a1a;
+                --text-color: #e9ecef;
+                --card-bg: #2d3748;
+                --border-color: #4a5568;
+                --success-color: #38c169;
+                --error-color: #fc8181;
+                --warning-color: #f6e05e;
+                --skip-color: #a0aec0;
+                --shadow: 0 2px 4px rgba(0,0,0,0.3);
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .header .status-icon {
+            font-size: 2rem;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.8;
+        }
+
+        .summary {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 3rem;
+            flex-wrap: wrap;
+        }
+
+        .summary-item {
+            background: var(--card-bg);
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            text-align: center;
+            min-width: 120px;
+        }
+
+        .summary-item .number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.25rem;
+        }
+
+        .summary-item .label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .summary-item.passed .number { color: var(--success-color); }
+        .summary-item.failed .number { color: var(--error-color); }
+        .summary-item.skipped .number { color: var(--skip-color); }
+
+        .checks {
+            display: grid;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .check {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .check:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .check-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .check-icon {
+            font-size: 1.5rem;
+            min-width: 1.5rem;
+        }
+
+        .check-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .check-duration {
+            font-size: 0.85rem;
+            opacity: 0.7;
+            font-family: monospace;
+        }
+
+        .check-message {
+            margin-left: 2.25rem;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .check-error {
+            margin-left: 2.25rem;
+            margin-top: 0.5rem;
+            padding: 0.75rem;
+            background: rgba(220, 53, 69, 0.1);
+            border: 1px solid rgba(220, 53, 69, 0.2);
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            white-space: pre-wrap;
+            color: var(--error-color);
+        }
+
+        .check.passed { border-left: 4px solid var(--success-color); }
+        .check.failed { border-left: 4px solid var(--error-color); }
+        .check.skipped { border-left: 4px solid var(--skip-color); }
+
+        .check.passed .check-icon { color: var(--success-color); }
+        .check.failed .check-icon { color: var(--error-color); }
+        .check.skipped .check-icon { color: var(--skip-color); }
+
+        .footer {
+            text-align: center;
+            padding: 2rem 0;
+            border-top: 1px solid var(--border-color);
+            margin-top: 3rem;
+            opacity: 0.6;
+            font-size: 0.9rem;
+        }
+
+        .footer a {
+            color: var(--text-color);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .summary {
+                gap: 1rem;
+            }
+            
+            .check {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                {% if overall_status == "passed" %}
+                    <span class="status-icon">✅</span>
+                {% elif overall_status == "failed" %}
+                    <span class="status-icon">❌</span>
+                {% else %}
+                    <span class="status-icon">⚠️</span>
+                {% endif %}
+                Health Check
+            </h1>
+            <p>{{ app_name or "Application" }} Status</p>
+        </div>
+
+        <div class="summary">
+            <div class="summary-item passed">
+                <div class="number">{{ stats.passed }}</div>
+                <div class="label">Passed</div>
+            </div>
+            <div class="summary-item failed">
+                <div class="number">{{ stats.failed }}</div>
+                <div class="label">Failed</div>
+            </div>
+            <div class="summary-item skipped">
+                <div class="number">{{ stats.skipped }}</div>
+                <div class="label">Skipped</div>
+            </div>
+            <div class="summary-item">
+                <div class="number">{{ stats.total }}</div>
+                <div class="label">Total</div>
+            </div>
+        </div>
+
+        <div class="checks">
+            {% for check, result in results %}
+            <div class="check {{ result.status.value }}">
+                <div class="check-header">
+                    {% if result.status.value == "passed" %}
+                        <span class="check-icon">✅</span>
+                    {% elif result.status.value == "failed" %}
+                        <span class="check-icon">❌</span>
+                    {% elif result.status.value == "error" %}
+                        <span class="check-icon">💥</span>
+                    {% elif result.status.value == "skipped" %}
+                        <span class="check-icon">⏭️</span>
+                    {% endif %}
+                    <div class="check-title">{{ check.description }}</div>
+                    {% if result.duration_ms is not none %}
+                        <div class="check-duration">{{ "%.1f"|format(result.duration_ms) }}ms</div>
+                    {% endif %}
+                </div>
+                
+                {% if result.skip_reason %}
+                    <div class="check-message">{{ result.skip_reason }}</div>
+                {% elif result.message and result.status.value != "passed" %}
+                    <div class="check-message">{{ result.message }}</div>
+                {% endif %}
+                
+                {% if result.error %}
+                    <div class="check-error">{{ result.error }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="footer">
+            <p>
+                Generated at {{ timestamp }} | 
+                Environment: <strong>{{ environment }}</strong> |
+                <a href="https://github.com/navinpai/allgreen" target="_blank">Powered by allgreen</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
