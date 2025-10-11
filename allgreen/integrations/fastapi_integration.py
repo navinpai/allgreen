@@ -19,18 +19,21 @@ Usage:
         return await fastapi_integration.healthcheck_endpoint()
 """
 
+import os
 from datetime import datetime
 
 try:
+    import anyio
     from fastapi import APIRouter, Request
     from fastapi.responses import HTMLResponse, JSONResponse
-    from jinja2 import Template
+    from jinja2 import Environment, FileSystemLoader
 except ImportError:
     raise ImportError(
-        "FastAPI and Jinja2 are required for fastapi_integration. "
+        "FastAPI, anyio, and jinja2 are required for fastapi_integration. "
         "Install with: pip install allgreen[fastapi]"
     ) from None
 
+import allgreen
 from ..config import load_config
 from ..core import CheckStatus, get_registry
 
@@ -39,7 +42,7 @@ def create_router(
     app_name: str = "FastAPI Application",
     config_path: str | None = None,
     environment: str | None = None,
-    prefix: str = ""
+    prefix: str | None = None
 ) -> APIRouter:
     """
     Create a FastAPI router with health check endpoints.
@@ -48,11 +51,16 @@ def create_router(
         app_name: Application name to display
         config_path: Path to allgood.py config file
         environment: Environment name
-        prefix: URL prefix for routes
+        prefix: URL prefix for routes (use with app.include_router(router, prefix="/..."))
 
     Returns:
         APIRouter with /healthcheck and /healthcheck.json endpoints
+        
+    Usage:
+        router = create_router(app_name="My App")
+        app.include_router(router, prefix="/health")  # Routes: /health/healthcheck
     """
+    # Create router without prefix - let FastAPI handle it via include_router
     router = APIRouter()
 
     @router.get("/healthcheck", response_class=HTMLResponse)
@@ -90,13 +98,16 @@ async def _healthcheck_handler(
 ):
     """Internal handler for health check logic."""
 
-    # Load configuration and run checks
+    # Load configuration and run checks in thread pool to avoid blocking event loop
     if environment is None:
         environment = "development"
 
-    load_config(config_path, environment)
-    registry = get_registry()
-    results = await registry.run_all_async(environment)
+    async def run_checks():
+        load_config(config_path, environment)
+        registry = get_registry()
+        return registry.run_all(environment)
+
+    results = await anyio.to_thread.run_sync(run_checks)
 
     # Calculate statistics and overall status
     stats = _calculate_stats(results)
@@ -116,12 +127,15 @@ async def _healthcheck_handler(
     # Determine HTTP status code
     status_code = 200 if overall_status == "passed" else 503
 
+    # Cache-Control headers to prevent caching
+    headers = {"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"}
+
     if wants_json:
         # Return JSON response
         response_data = _format_json_response(
             results, stats, overall_status, app_name, environment
         )
-        return JSONResponse(content=response_data, status_code=status_code)
+        return JSONResponse(content=response_data, status_code=status_code, headers=headers)
     else:
         # Return HTML response
         context = {
@@ -134,7 +148,7 @@ async def _healthcheck_handler(
         }
 
         html_content = _render_html_template(context)
-        return HTMLResponse(content=html_content, status_code=status_code)
+        return HTMLResponse(content=html_content, status_code=status_code, headers=headers)
 
 
 def _calculate_stats(results):
@@ -199,65 +213,9 @@ def _format_json_response(results, stats, overall_status, app_name, environment)
 
 
 def _render_html_template(context):
-    """Render HTML template using Jinja2."""
-    # Use the same template as Flask but render with Jinja2 directly
-    template_str = _get_html_template()
-    template = Template(template_str)
+    """Render HTML template using the shared template."""
+    # Use the shared template from allgreen/templates/
+    template_dir = os.path.join(os.path.dirname(allgreen.__file__), 'templates')
+    env = Environment(loader=FileSystemLoader(template_dir))
+    template = env.get_template('healthcheck.html')
     return template.render(**context)
-
-
-def _get_html_template():
-    """Get HTML template string."""
-    # For brevity, returning a simple template
-    # In a real implementation, this would be the full template
-    return """
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Health Check - {{ app_name }}</title>
-    <style>
-        body { font-family: sans-serif; margin: 40px; }
-        .header { text-align: center; margin-bottom: 2rem; }
-        .pass { color: green; }
-        .fail { color: red; }
-        .skip { color: orange; }
-        .summary { display: flex; gap: 2rem; justify-content: center; margin: 2rem 0; }
-        .summary-item { text-align: center; padding: 1rem; background: #f5f5f5; border-radius: 8px; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>Health Check: {{ app_name }}</h1>
-        <p>Status: <strong>{{ overall_status }}</strong></p>
-        <p>Environment: {{ environment }} | {{ timestamp }}</p>
-    </div>
-
-    <div class="summary">
-        <div class="summary-item">
-            <div style="font-size: 2rem; color: green;">{{ stats.passed }}</div>
-            <div>Passed</div>
-        </div>
-        <div class="summary-item">
-            <div style="font-size: 2rem; color: red;">{{ stats.failed }}</div>
-            <div>Failed</div>
-        </div>
-        <div class="summary-item">
-            <div style="font-size: 2rem; color: orange;">{{ stats.skipped }}</div>
-            <div>Skipped</div>
-        </div>
-    </div>
-
-    <h2>Detailed Results</h2>
-    <ul>
-    {% for check, result in results %}
-        <li class="{{ result.status.value }}">
-            <strong>{{ check.description }}</strong>: {{ result.status.value }}
-            {% if result.duration_ms %} ({{ "%.1f"|format(result.duration_ms) }}ms){% endif %}
-            {% if result.skip_reason %}<br><em>{{ result.skip_reason }}</em>{% endif %}
-            {% if result.message and result.status.value != "passed" %}<br><em>{{ result.message }}</em>{% endif %}
-        </li>
-    {% endfor %}
-    </ul>
-</body>
-</html>
-"""
