@@ -4,8 +4,9 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from flask import Flask, Response, jsonify, render_template, request
 
-from .config import load_config
-from .core import Check, CheckResult, CheckStatus, get_registry
+import allgreen
+from ..config import load_config
+from ..core import Check, CheckResult, CheckStatus, get_registry
 
 
 class HealthCheckApp:
@@ -159,7 +160,7 @@ def create_app(
     """Create and configure a Flask app with health check endpoints."""
 
     if flask_app is None:
-        flask_app = Flask(__name__)
+        flask_app = Flask(__name__, template_folder=os.path.join(os.path.dirname(allgreen.__file__), 'templates'))
 
     # Create health check instance
     health_checker = HealthCheckApp(
