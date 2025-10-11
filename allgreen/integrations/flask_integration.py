@@ -165,11 +165,11 @@ def create_healthcheck_blueprint(
     url_prefix: str | None = None
 ) -> Blueprint:
     """Create a Blueprint with health check endpoints."""
-    
+
     # Create blueprint
     blueprint = Blueprint(
-        'healthcheck', 
-        __name__, 
+        'healthcheck',
+        __name__,
         template_folder=os.path.join(os.path.dirname(allgreen.__file__), 'templates'),
         url_prefix=url_prefix
     )

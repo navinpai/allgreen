@@ -34,6 +34,7 @@ except ImportError:
     ) from None
 
 import allgreen
+
 from ..config import load_config
 from ..core import CheckStatus, get_registry
 
@@ -55,7 +56,7 @@ def create_router(
 
     Returns:
         APIRouter with /healthcheck and /healthcheck.json endpoints
-        
+
     Usage:
         router = create_router(app_name="My App")
         app.include_router(router, prefix="/health")  # Routes: /health/healthcheck

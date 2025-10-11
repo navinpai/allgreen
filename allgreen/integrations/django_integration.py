@@ -121,7 +121,7 @@ def healthcheck_view(
 
         html_content = _render_html_template(context)
         response = HttpResponse(html_content, status=status_code, content_type='text/html')
-    
+
     # Add Cache-Control headers to prevent caching
     response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     return response
@@ -191,7 +191,7 @@ def _format_json_response(results, stats, overall_status, app_name, environment)
 def _render_html_template(context):
     """
     Render HTML template using Django's template system.
-    
+
     Uses the shared template at allgreen/healthcheck.html.
     """
     return render_to_string('allgreen/healthcheck.html', context)
