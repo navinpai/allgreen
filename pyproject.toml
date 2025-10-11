@@ -55,8 +55,7 @@ include = ["allgreen*"]
 
 [tool.setuptools.package-data]
 allgreen = [
-    "templates/*.html",
-    "templates/allgreen/*.html",
+    "templates/**/*.html",
     "integrations/*.py",
 ]
 
