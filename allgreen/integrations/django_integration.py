@@ -61,6 +61,7 @@ class HealthCheckView(View):
         )
 
 
+@never_cache
 def healthcheck_view(
     request: HttpRequest,
     app_name: str = "Django Application",
@@ -103,7 +104,7 @@ def healthcheck_view(
 
     if wants_json:
         # Return JSON response
-        return JsonResponse(
+        response = JsonResponse(
             _format_json_response(results, stats, overall_status, app_name, environment),
             status=status_code
         )
@@ -119,7 +120,11 @@ def healthcheck_view(
         }
 
         html_content = _render_html_template(context)
-        return HttpResponse(html_content, status=status_code, content_type='text/html')
+        response = HttpResponse(html_content, status=status_code, content_type='text/html')
+    
+    # Add Cache-Control headers to prevent caching
+    response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    return response
 
 
 def _calculate_stats(results):
@@ -185,51 +190,8 @@ def _format_json_response(results, stats, overall_status, app_name, environment)
 
 def _render_html_template(context):
     """
-    Render HTML template.
-
-    First tries to use Django template loader to find 'allgreen/healthcheck.html',
-    falls back to inline template if not found.
+    Render HTML template using Django's template system.
+    
+    Uses the shared template at allgreen/healthcheck.html.
     """
-    try:
-        # Try to use Django template
-        return render_to_string('allgreen/healthcheck.html', context)
-    except Exception:
-        # Fall back to inline template (same as Flask version)
-        return _get_inline_template().format(**context)
-
-
-def _get_inline_template():
-    """Inline HTML template as fallback."""
-    # This would contain the same HTML template as the Flask version
-    # For brevity, returning a simple template here
-    return """
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Health Check - {app_name}</title>
-    <style>
-        body {{ font-family: sans-serif; margin: 40px; }}
-        .pass {{ color: green; }}
-        .fail {{ color: red; }}
-        .skip {{ color: orange; }}
-    </style>
-</head>
-<body>
-    <h1>Health Check: {app_name}</h1>
-    <p>Status: <strong>{overall_status}</strong></p>
-    <p>Environment: {environment}</p>
-    <p>Timestamp: {timestamp}</p>
-
-    <h2>Results</h2>
-    <ul>
-    {% for check, result in results %}
-        <li class="{result.status.value}">
-            {check.description}: {result.status.value}
-            {% if result.skip_reason %} - {result.skip_reason}{% endif %}
-            {% if result.message and result.status.value != "passed" %} - {result.message}{% endif %}
-        </li>
-    {% endfor %}
-    </ul>
-</body>
-</html>
-"""
+    return render_to_string('allgreen/healthcheck.html', context)
