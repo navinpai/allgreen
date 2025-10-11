@@ -43,17 +43,25 @@
             color: var(--text-color);
             line-height: 1.6;
             min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        .header {
+            text-align: center;
+            width: 100%;
+            margin: 0;
+            padding: 2rem 0;
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 2rem;
+            padding: 0 2rem 2rem 2rem;
         }
 
-        .header {
-            text-align: center;
-            margin-bottom: 3rem;
+        .content {
+            padding-top: 2rem;
         }
 
         .header h1 {
@@ -72,6 +80,32 @@
         .header p {
             font-size: 1.2rem;
             opacity: 0.8;
+        }
+
+        .header.all-green {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 3rem 0;
+        }
+
+        .header.all-green p {
+            opacity: 0.9;
+            color: white;
+        }
+
+        .header.has-failures {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            padding: 3rem 0;
+        }
+
+        .header.has-failures p {
+            opacity: 0.9;
+            color: white;
+        }
+
+        .header.has-failures .status-icon {
+            color: rgba(255, 255, 255, 0.9);
         }
 
         .summary {
@@ -215,22 +249,24 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>
-                {% if overall_status == "passed" %}
-                    <span class="status-icon">✅</span>
-                {% elif overall_status == "failed" %}
-                    <span class="status-icon">❌</span>
-                {% else %}
-                    <span class="status-icon">⚠️</span>
-                {% endif %}
+    <div class="header {% if overall_status == 'passed' %}all-green{% elif overall_status == 'failed' %}has-failures{% endif %}">
+        <h1>
+            {% if overall_status == "passed" %}
+                🤙🏼 It's allgreen!
+            {% elif overall_status == "failed" %}
+                <span class="status-icon">⚠️</span>
+                Something's not right
+            {% else %}
+                <span class="status-icon">⚠️</span>
                 Health Check
-            </h1>
-            <p>{{ app_name or "Application" }} Status</p>
-        </div>
+            {% endif %}
+        </h1>
+        <p>{{ app_name or "Application" }} Status</p>
+    </div>
 
-        <div class="summary">
+    <div class="container">
+        <div class="content">
+            <div class="summary">
             <div class="summary-item passed">
                 <div class="number">{{ stats.passed }}</div>
                 <div class="label">Passed</div>
@@ -281,12 +317,13 @@
             {% endfor %}
         </div>
 
-        <div class="footer">
-            <p>
-                Generated at {{ timestamp }} | 
-                Environment: <strong>{{ environment }}</strong> |
-                <a href="https://github.com/navinpai/allgreen" target="_blank">Powered by allgreen</a>
-            </p>
+            <div class="footer">
+                <p>
+                    Generated at {{ timestamp }} | 
+                    Environment: <strong>{{ environment }}</strong> |
+                    <a href="https://github.com/navinpai/allgreen" target="_blank">Powered by allgreen</a>
+                </p>
+            </div>
         </div>
     </div>
 </body>
