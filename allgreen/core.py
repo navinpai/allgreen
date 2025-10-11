@@ -51,8 +51,11 @@ class CheckTimeoutError(AllgreenError):
 @contextmanager
 def timeout_context(seconds: int):
     """Context manager for timing out function execution."""
-    if hasattr(signal, 'SIGALRM'):
-        # Unix systems - use signals (more reliable)
+    # Check if we're in the main thread and signals are available
+    is_main_thread = threading.current_thread() is threading.main_thread()
+    
+    if hasattr(signal, 'SIGALRM') and is_main_thread:
+        # Unix systems in main thread - use signals (more reliable)
         def timeout_handler(signum, frame):
             raise CheckTimeoutError(f"Check timed out after {seconds} seconds")
 
@@ -64,7 +67,7 @@ def timeout_context(seconds: int):
             signal.alarm(0)
             signal.signal(signal.SIGALRM, old_handler)
     else:
-        # Windows/other systems - use threading (less reliable but works)
+        # Threading-based timeout (works in all threads and systems)
         timer_expired = threading.Event()
 
         def timeout_func():
@@ -74,8 +77,10 @@ def timeout_context(seconds: int):
         timer.start()
 
         try:
+            start_time = time.time()
             yield
-            if timer_expired.is_set():
+            # Check if we timed out during execution
+            if timer_expired.is_set() or (time.time() - start_time) >= seconds:
                 raise CheckTimeoutError(f"Check timed out after {seconds} seconds")
         finally:
             timer.cancel()
