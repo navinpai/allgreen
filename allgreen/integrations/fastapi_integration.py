@@ -103,7 +103,7 @@ async def _healthcheck_handler(
     if environment is None:
         environment = "development"
 
-    async def run_checks():
+    def run_checks():
         load_config(config_path, environment)
         registry = get_registry()
         return registry.run_all(environment)
