@@ -1,11 +1,19 @@
 """
 Django integration for allgreen health checks.
 
-Usage:
-    # In views.py
-    from allgreen.integrations import django_integration
+Setup:
+    1. Add 'allgreen' to INSTALLED_APPS in settings.py:
+        INSTALLED_APPS = [
+            # ... other apps
+            'allgreen',
+        ]
+    
+    2. Create health checks in allgood.py file in your project root
 
-    # Add to urlpatterns
+Usage:
+    # In urls.py
+    from allgreen.integrations import django_integration
+    
     urlpatterns = [
         path('healthcheck/', django_integration.healthcheck_view, name='healthcheck'),
     ]
