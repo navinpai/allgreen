@@ -40,7 +40,7 @@ async def index():
 # Method 1: Mount the health check router
 health_router = create_router(
     app_name="FastAPI Example App",
-    config_path="examples/allgood.py",
+    config_path="examples/allgreen.py",
     environment="development"
 )
 app.include_router(health_router)
@@ -52,7 +52,7 @@ async def health_check(request: Request):
     return await healthcheck_endpoint(
         request,
         app_name="FastAPI Direct Endpoint",
-        config_path="examples/allgood.py",
+        config_path="examples/allgreen.py",
         environment="development"
     )
 

@@ -30,7 +30,7 @@ def index():
 mount_healthcheck(
     app,
     app_name="Flask Example App",
-    config_path="examples/allgood.py",
+    config_path="examples/allgreen.py",
     environment="development"
 )
 

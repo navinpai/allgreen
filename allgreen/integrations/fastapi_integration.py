@@ -50,7 +50,7 @@ def create_router(
 
     Args:
         app_name: Application name to display
-        config_path: Path to allgood.py config file
+        config_path: Path to allgreen.py config file
         environment: Environment name
         prefix: URL prefix for routes (use with app.include_router(router, prefix="/..."))
 
