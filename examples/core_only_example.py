@@ -41,7 +41,7 @@ def run_health_checks():
     """Run all health checks and return results."""
     # Load additional checks from config file (if available)
     try:
-        load_config("examples/allgreen.py", "development")
+        load_config("examples/allgreen_config.py", "development")
     except Exception:
         print("💡 No config file found, using inline checks only")
 

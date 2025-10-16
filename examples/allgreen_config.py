@@ -1,4 +1,4 @@
-# Sample allgreen.py configuration file
+# Sample allgreen_config.py configuration file
 # This demonstrates various types of health checks
 
 @check("Basic truth check")

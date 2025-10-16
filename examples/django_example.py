@@ -84,7 +84,7 @@ if __name__ == '__main__':
     print("🚀 Django + Allgreen Example")
     print("📋 Health checks: http://localhost:8000/healthcheck/")
     print("🔧 JSON API: http://localhost:8000/healthcheck/?format=json")
-    print("💡 Using config: examples/allgreen.py")
+    print("💡 Using config: examples/allgreen_config.py")
     print()
 
     # Run Django dev server
