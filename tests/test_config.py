@@ -7,7 +7,7 @@ from allgreen import find_config, get_registry, load_config
 def test_find_config_file():
     # Test with a temporary config file
     with tempfile.TemporaryDirectory() as tmpdir:
-        config_path = os.path.join(tmpdir, "allgreen.py")
+        config_path = os.path.join(tmpdir, "allgreen_config.py")
         with open(config_path, 'w') as f:
             f.write('# test config')
 
@@ -17,7 +17,7 @@ def test_find_config_file():
             os.chdir(tmpdir)
             found_path = find_config()
             assert found_path is not None
-            assert found_path.endswith("allgreen.py")
+            assert found_path.endswith("allgreen_config.py")
         finally:
             os.chdir(original_cwd)
 
@@ -63,7 +63,7 @@ def math_check():
 
 
 def test_load_nonexistent_config():
-    success = load_config("/nonexistent/path/allgreen.py")
+    success = load_config("/nonexistent/path/allgreen_config.py")
     assert not success, "Should fail to load nonexistent config"
 
 

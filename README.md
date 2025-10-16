@@ -45,10 +45,10 @@ pip install allgreen[fastapi]
 
 ### 1. Create your health checks
 
-Create an `allgreen.py` file in your project root:
+Create an `allgreen_config.py` file in your project root:
 
 ```python
-# allgreen.py
+# allgreen_config.py
 
 @check("Database connection is healthy")
 def database_check():
@@ -248,7 +248,7 @@ app = Flask(__name__)
 mount_healthcheck(
     app, 
     app_name="My Flask API",
-    config_path="config/allgreen.py",
+    config_path="config/allgreen_config.py",
     environment="production"
 )
 
@@ -306,8 +306,8 @@ async def health(request: Request):
 
 Check out the `examples/` directory for complete working examples:
 
-- **[`examples/allgreen.py`](examples/allgreen.py)** - Basic health checks configuration
-- **[`examples/advanced_allgreen.py`](examples/advanced_allgreen.py)** - Advanced features (timeouts, rate limiting)
+- **[`examples/allgreen_config.py`](examples/allgreen_config.py)** - Basic health checks configuration
+- **[`examples/advanced_allgreen_config.py`](examples/advanced_allgreen_config.py)** - Advanced features (timeouts, rate limiting)
 - **[`examples/core_only_example.py`](examples/core_only_example.py)** - Core-only usage (no web dependencies)
 - **[`examples/flask_example.py`](examples/flask_example.py)** - Flask integration example
 - **[`examples/django_example.py`](examples/django_example.py)** - Django integration example  
@@ -317,8 +317,8 @@ Check out the `examples/` directory for complete working examples:
 
 Allgreen automatically looks for configuration files in these locations:
 
-1. `allgreen.py` (project root)
-2. `config/allgreen.py`  
+1. `allgreen_config.py` (project root)
+2. `config/allgreen_config.py`  
 3. Custom path via `config_path` parameter
 
 ## 🎛️ Environment Variables

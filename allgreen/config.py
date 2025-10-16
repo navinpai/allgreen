@@ -10,7 +10,7 @@ class ConfigLoader:
         self._loaded_path: str | None = None
 
     def find_config_file(self) -> str | None:
-        """Find allgreen.py configuration file in standard locations."""
+        """Find allgreen_config.py configuration file in standard locations."""
         if self.config_path:
             if os.path.exists(self.config_path):
                 return os.path.abspath(self.config_path)
@@ -18,10 +18,10 @@ class ConfigLoader:
 
         # Standard locations to check
         possible_paths = [
-            "allgreen.py",
-            "config/allgreen.py",
-            os.path.join(os.getcwd(), "allgreen.py"),
-            os.path.join(os.getcwd(), "config", "allgreen.py"),
+            "allgreen_config.py",
+            "config/allgreen_config.py",
+            os.path.join(os.getcwd(), "allgreen_config.py"),
+            os.path.join(os.getcwd(), "config", "allgreen_config.py"),
         ]
 
         for path in possible_paths:

@@ -40,7 +40,7 @@ async def index():
 # Method 1: Mount the health check router
 health_router = create_router(
     app_name="FastAPI Example App",
-    config_path="examples/allgreen.py",
+    config_path="examples/allgreen_config.py",
     environment="development"
 )
 app.include_router(health_router)
@@ -52,7 +52,7 @@ async def health_check(request: Request):
     return await healthcheck_endpoint(
         request,
         app_name="FastAPI Direct Endpoint",
-        config_path="examples/allgreen.py",
+        config_path="examples/allgreen_config.py",
         environment="development"
     )
 
@@ -61,7 +61,7 @@ if __name__ == '__main__':
     print("📋 Health checks: http://localhost:8000/healthcheck")
     print("🔧 JSON API: http://localhost:8000/healthcheck.json")
     print("📚 OpenAPI docs: http://localhost:8000/docs")
-    print("💡 Using config: examples/allgood.py")
+    print("💡 Using config: examples/allgreen_config.py")
     print()
 
     # Run with uvicorn

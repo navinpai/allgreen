@@ -8,7 +8,7 @@ Setup:
             'allgreen',
         ]
 
-    2. Create health checks in allgreen.py file in your project root
+    2. Create health checks in allgreen_config.py file in your project root
 
 Usage:
     # In urls.py
@@ -85,7 +85,7 @@ def healthcheck_view(
     Args:
         request: Django HTTP request
         app_name: Application name to display
-        config_path: Path to allgreen.py config file
+        config_path: Path to allgreen_config.py config file
         environment: Environment name (defaults to 'development')
     """
 
