@@ -7,13 +7,13 @@ Setup:
             # ... other apps
             'allgreen',
         ]
-    
-    2. Create health checks in allgood.py file in your project root
+
+    2. Create health checks in allgreen.py file in your project root
 
 Usage:
     # In urls.py
     from allgreen.integrations import django_integration
-    
+
     urlpatterns = [
         path('healthcheck/', django_integration.healthcheck_view, name='healthcheck'),
     ]
@@ -85,7 +85,7 @@ def healthcheck_view(
     Args:
         request: Django HTTP request
         app_name: Application name to display
-        config_path: Path to allgood.py config file
+        config_path: Path to allgreen.py config file
         environment: Environment name (defaults to 'development')
     """
 
@@ -118,8 +118,22 @@ def healthcheck_view(
         )
     else:
         # Return HTML response
+        # Add formatted duration for template compatibility
+        formatted_results = []
+        for check, result in results:
+            # Create a copy of result with formatted duration
+            result_dict = {
+                'status': result.status,
+                'message': result.message,
+                'error': result.error,
+                'duration_ms': result.duration_ms,
+                'duration_formatted': f"{result.duration_ms:.1f}" if result.duration_ms is not None else None,
+                'skip_reason': result.skip_reason,
+            }
+            formatted_results.append((check, type('Result', (), result_dict)()))
+
         context = {
-            'results': results,
+            'results': formatted_results,
             'stats': stats,
             'overall_status': overall_status,
             'app_name': app_name,

@@ -1,4 +1,4 @@
-# Advanced allgood.py configuration demonstrating rate limiting and timeouts
+# Advanced allgreen.py configuration demonstrating rate limiting and timeouts
 
 @check("Basic health check")
 def basic_check():
