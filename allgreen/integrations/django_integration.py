@@ -9,6 +9,7 @@ Setup:
         ]
 
     2. Create health checks in allgreen_config.py file in your project root
+       Note: Use absolute imports only. Relative imports are not supported.
 
 Usage:
     # In urls.py

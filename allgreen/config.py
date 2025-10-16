@@ -1,5 +1,4 @@
 import os
-import sys
 
 from .core import get_registry
 
@@ -44,18 +43,12 @@ class ConfigLoader:
             get_registry().clear()
 
         try:
-            # Add the config file's directory to Python path temporarily
-            config_dir = os.path.dirname(config_file)
-            if config_dir not in sys.path:
-                sys.path.insert(0, config_dir)
-                path_added = True
-            else:
-                path_added = False
-
             # Import DSL functions locally to avoid circular imports
             from .core import check, expect, make_sure
 
             # Create a namespace with our DSL functions
+            # Note: Config files should use absolute imports only.
+            # Relative imports are not supported to avoid sys.path conflicts.
             namespace = {
                 '__file__': config_file,
                 '__name__': '__main__',
@@ -69,10 +62,6 @@ class ConfigLoader:
             with open(config_file) as f:
                 code = compile(f.read(), config_file, 'exec')
                 exec(code, namespace)
-
-            # Remove from path if we added it
-            if path_added:
-                sys.path.remove(config_dir)
 
             self._loaded_path = config_file
             return True

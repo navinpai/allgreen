@@ -47,6 +47,8 @@ pip install allgreen[fastapi]
 
 Create an `allgreen_config.py` file in your project root:
 
+> **Note**: Config files should use absolute imports only. Relative imports are not supported to avoid import conflicts.
+
 ```python
 # allgreen_config.py
 
