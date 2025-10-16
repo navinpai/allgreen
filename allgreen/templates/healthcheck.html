@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Health Check - {% if app_name %}{{ app_name }}{% else %}Application{% endif %}</title>
+    <title>Health Check - {{ app_name or "Application" }}</title>
     <style>
         :root {
             --bg-color: #ffffff;
@@ -261,7 +261,7 @@
                 Health Check
             {% endif %}
         </h1>
-        <p>{% if app_name %}{{ app_name }}{% else %}Application{% endif %} Status</p>
+        <p>{{ app_name or "Application" }} Status</p>
     </div>
 
     <div class="container">
