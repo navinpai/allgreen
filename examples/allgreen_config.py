@@ -19,12 +19,12 @@ def env_check():
     make_sure('PATH' in os.environ, "PATH environment variable should exist")
 
 
-@check("Production only check", only="production")
+@check("Production only check", only_in="production")
 def production_check():
     make_sure(ENVIRONMENT == "production", "Should only run in production")
 
 
-@check("Skip in development", except_env="development")
+@check("Skip in development", except_in="development")
 def skip_dev_check():
     make_sure(True, "This should be skipped in development")
 

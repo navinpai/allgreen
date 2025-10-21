@@ -194,16 +194,16 @@ class Check:
         description: str,
         func: Callable[[], None],
         timeout: int | None = None,
-        only: str | list[str] | None = None,
-        except_env: str | list[str] | None = None,
+        only_in: str | list[str] | None = None,
+        except_in: str | list[str] | None = None,
         if_condition: bool | Callable[[], bool] | None = None,
         run: str | None = None,
     ):
         self.description = description
         self.func = func
         self.timeout = timeout or 10  # Default 10 second timeout
-        self.only = self._normalize_env_list(only)
-        self.except_env = self._normalize_env_list(except_env)
+        self.only_in = self._normalize_env_list(only_in)
+        self.except_in = self._normalize_env_list(except_in)
         self.if_condition = if_condition
         self.run = run
 
@@ -216,10 +216,10 @@ class Check:
 
     def should_run(self, environment: str = "development") -> tuple[bool, str | None]:
         # Check environment conditions
-        if self.only and environment not in self.only:
-            return False, f"Only runs in {', '.join(self.only)}, current: {environment}"
+        if self.only_in and environment not in self.only_in:
+            return False, f"Only runs in {', '.join(self.only_in)}, current: {environment}"
 
-        if self.except_env and environment in self.except_env:
+        if self.except_in and environment in self.except_in:
             return False, f"Skipped in {environment} environment"
 
         # Check if condition
@@ -273,6 +273,98 @@ class Check:
         try:
             # Execute with robust timeout enforcement
             execute_with_robust_timeout(self.func, self.timeout)
+
+            duration_ms = (time.time() - start_time) * 1000
+            result = CheckResult(
+                status=CheckStatus.PASSED,
+                message="Check passed",
+                duration_ms=duration_ms
+            )
+
+            # Cache result for rate-limited checks
+            if self.run:
+                self._cache_result(result, environment)
+
+            return result
+
+        except CheckTimeoutError as e:
+            duration_ms = (time.time() - start_time) * 1000
+            result = CheckResult(
+                status=CheckStatus.ERROR,
+                error=str(e),
+                message="Check timed out",
+                duration_ms=duration_ms
+            )
+            if self.run:
+                self._cache_result(result, environment)
+            return result
+
+        except CheckAssertionError as e:
+            duration_ms = (time.time() - start_time) * 1000
+            result = CheckResult(
+                status=CheckStatus.FAILED,
+                message=str(e),
+                duration_ms=duration_ms
+            )
+            if self.run:
+                self._cache_result(result, environment)
+            return result
+
+        except Exception as e:
+            duration_ms = (time.time() - start_time) * 1000
+            result = CheckResult(
+                status=CheckStatus.ERROR,
+                error=f"{type(e).__name__}: {e}",
+                message=traceback.format_exc(),
+                duration_ms=duration_ms
+            )
+            if self.run:
+                self._cache_result(result, environment)
+            return result
+
+    async def execute_async(self, environment: str = "development") -> CheckResult:
+        """
+        Execute check asynchronously without blocking the event loop.
+
+        This is essential for ASGI applications like FastAPI.
+        """
+        # Check basic conditions (environment, if_condition)
+        should_run, skip_reason = self.should_run(environment)
+        if not should_run:
+            return CheckResult(
+                status=CheckStatus.SKIPPED,
+                skip_reason=skip_reason
+            )
+
+        # Check rate limiting if specified
+        if self.run:
+            should_run_rate, skip_reason_rate, cached_result = self._check_rate_limit(environment)
+            if not should_run_rate:
+                # Return cached result if we have one, otherwise create skipped result
+                if cached_result:
+                    # Use the cached result's actual status (PASSED/FAILED/ERROR)
+                    # but indicate it's cached in the message
+                    original_message = cached_result.get('message', '')
+                    cache_indicator = " (cached result)"
+                    cached_message = f"{original_message}{cache_indicator}" if original_message else "Cached result"
+
+                    return CheckResult(
+                        status=CheckStatus(cached_result['status']),  # Use original status
+                        message=cached_message,
+                        error=cached_result.get('error'),
+                        duration_ms=cached_result.get('duration_ms', 0),
+                        skip_reason=None  # Not actually skipped, just cached
+                    )
+                else:
+                    return CheckResult(
+                        status=CheckStatus.SKIPPED,
+                        skip_reason=skip_reason_rate
+                    )
+
+        start_time = time.time()
+        try:
+            # Execute with async timeout enforcement
+            await execute_with_async_timeout(self.func, self.timeout)
 
             duration_ms = (time.time() - start_time) * 1000
             result = CheckResult(
@@ -406,8 +498,8 @@ _registry = CheckRegistry()
 def check(
     description: str,
     timeout: int | None = None,
-    only: str | list[str] | None = None,
-    except_env: str | list[str] | None = None,
+    only_in: str | list[str] | None = None,
+    except_in: str | list[str] | None = None,
     if_condition: bool | Callable[[], bool] | None = None,
     run: str | None = None,
 ):
@@ -416,8 +508,8 @@ def check(
             description=description,
             func=func,
             timeout=timeout,
-            only=only,
-            except_env=except_env,
+            only_in=only_in,
+            except_in=except_in,
             if_condition=if_condition,
             run=run,
         )
