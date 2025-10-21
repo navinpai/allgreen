@@ -9,17 +9,17 @@ Perfect for monitoring application health, smoke testing, and ensuring your serv
 
 ![Health Check Dashboard](https://via.placeholder.com/800x400/2d3748/e9ecef?text=Beautiful+Dark+Mode+Dashboard)
 
-## 🚀 Features
+## Features
 
-- **🎯 Simple DSL** - Define health checks in intuitive, readable Python
-- **🌐 Beautiful Web Dashboard** - Responsive UI with automatic dark mode
-- **⚡ Fast & Lightweight** - Minimal dependencies, maximum performance  
-- **⏰ Timeout Protection** - Prevent hanging checks with configurable timeouts
-- **🔄 Rate Limiting** - Control expensive operations ("2 times per hour")
-- **🌍 Environment Conditions** - Run checks only in specific environments
-- **💾 Result Caching** - Cache expensive operations between rate-limited runs
-- **📊 Multiple Output Formats** - HTML dashboard, JSON API, or both
-- **🔧 Framework Agnostic** - Works with Flask, Django, FastAPI, or standalone
+- **Simple DSL** - Define health checks in intuitive, readable Python
+- **Beautiful Web Dashboard** - Responsive UI with automatic dark mode
+- **Fast & Lightweight** - Minimal dependencies, maximum performance  
+- **Timeout Protection** - Prevent hanging checks with configurable timeouts
+- **Rate Limiting** - Control expensive operations ("2 times per hour")
+- **Environment Conditions** - Run checks only in specific environments
+- **Result Caching** - Cache expensive operations between rate-limited runs
+- **Multiple Output Formats** - HTML dashboard, JSON API, or both
+- **Framework Agnostic** - Works with Flask, Django, FastAPI, or standalone
 
 ## 📦 Installation
 
@@ -39,9 +39,9 @@ pip install allgreen[django]
 pip install allgreen[fastapi]
 ```
 
-**Framework-agnostic design** - use only what you need! 🎯
+**Framework-agnostic design** - use only what you need!
 
-## 🎯 Quick Start
+## Quick Start
 
 ### 1. Create your health checks
 
@@ -121,7 +121,7 @@ app.include_router(create_router(app_name="My API"))
 
 Visit `/healthcheck` in your browser to see a beautiful dashboard, or add `?format=json` for machine-readable output.
 
-## 📚 Complete DSL Reference
+## Complete DSL Reference
 
 ### Basic Assertions
 
@@ -142,7 +142,7 @@ def math_check():
     expect(database.connection_count()).to_be_greater_than(0)
 ```
 
-## ⏰ Advanced Features
+## Advanced Features
 
 ### Timeout Protection
 
@@ -194,15 +194,15 @@ def feature_check():
     expect(new_feature.status()).to_eq("operational")
 ```
 
-## 🌐 Web Interface
+## Web Interface
 
 ### HTML Dashboard
 Visit `/healthcheck` for a beautiful, responsive dashboard featuring:
-- ✅ Color-coded check results (pass/fail/skip)
-- 🌙 Automatic dark mode based on system preferences
+- Color-coded check results (pass/fail/skip)
+- Automatic dark mode based on system preferences
 - ⏱️ Execution timing for each check
 - 📊 Summary statistics
-- 📱 Mobile-responsive design
+- Mobile-responsive design
 
 ### JSON API
 Access `/healthcheck.json` or `/healthcheck?format=json` for machine-readable output:
@@ -237,7 +237,7 @@ Perfect for integration with monitoring tools like:
 - Datadog
 - Custom monitoring solutions
 
-## 🔧 Framework Integration
+## Framework Integration
 
 ### Flask Application
 ```python
@@ -304,7 +304,7 @@ async def health(request: Request):
     return await healthcheck_endpoint(request, app_name="My FastAPI")
 ```
 
-## 📁 Examples
+## Examples
 
 Check out the `examples/` directory for complete working examples:
 
@@ -315,7 +315,7 @@ Check out the `examples/` directory for complete working examples:
 - **[`examples/django_example.py`](examples/django_example.py)** - Django integration example  
 - **[`examples/fastapi_example.py`](examples/fastapi_example.py)** - FastAPI integration example
 
-## 🧪 Configuration File Locations
+## Configuration File Locations
 
 Allgreen automatically looks for configuration files in these locations:
 
@@ -323,13 +323,13 @@ Allgreen automatically looks for configuration files in these locations:
 2. `config/allgreen_config.py`  
 3. Custom path via `config_path` parameter
 
-## 🎛️ Environment Variables
+## Environment Variables
 
 - `ENVIRONMENT` - Sets the environment for conditional checks (default: "development")
 
-## 📊 Best Practices
+## Best Practices
 
-### ✅ Good Health Check Examples
+### Good Health Check Examples
 
 ```python
 @check("Database queries are fast")
@@ -350,21 +350,21 @@ def cache_check():
     expect(cache.get('test_key')).to_eq('test_value')
 ```
 
-### ❌ What to Avoid
+### What to Avoid
 
 - Don't make checks that modify data
 - Avoid checks that depend on external timing
 - Don't put business logic in health checks
 - Avoid checks that could cause cascading failures
 
-## 🔒 Security Notes
+## Security Notes
 
 - Health check endpoints don't require authentication by default
 - Consider restricting access in production environments
 - Avoid exposing sensitive system information in check descriptions
 - Rate limiting helps prevent abuse of expensive operations
 
-## 🛠️ Development
+## Development
 
 ```bash
 git clone https://github.com/navinpai/allgreen
@@ -383,7 +383,7 @@ ruff check .
 python test_server.py
 ```
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -395,11 +395,11 @@ python test_server.py
 8. Push to the branch (`git push origin feature/amazing-feature`)
 9. Open a Pull Request
 
-## 📝 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Inspired by the [Allgood Ruby gem](https://github.com/rameerez/allgood)
 - Built with ❤️ for the Python community
