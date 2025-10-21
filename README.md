@@ -7,8 +7,6 @@ Add quick, simple, and beautiful health checks to your Python application via a 
 
 Perfect for monitoring application health, smoke testing, and ensuring your services are running properly in production.
 
-![Health Check Dashboard](https://via.placeholder.com/800x400/2d3748/e9ecef?text=Beautiful+Dark+Mode+Dashboard)
-
 ## Features
 
 - **Simple DSL** - Define health checks in intuitive, readable Python
@@ -21,7 +19,7 @@ Perfect for monitoring application health, smoke testing, and ensuring your serv
 - **Multiple Output Formats** - HTML dashboard, JSON API, or both
 - **Framework Agnostic** - Works with Flask, Django, FastAPI, or standalone
 
-## 📦 Installation
+## Installation
 
 Choose the installation that fits your needs:
 
