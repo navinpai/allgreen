@@ -84,11 +84,11 @@ def test_environment_conditions():
     registry = get_registry()
     registry.clear()
 
-    @check("Production only check", only="production")
+    @check("Production only check", only_in="production")
     def prod_check():
         make_sure(True)
 
-    @check("Skip in development", except_env="development")
+    @check("Skip in development", except_in="development")
     def skip_dev_check():
         make_sure(True)
 

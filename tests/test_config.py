@@ -73,7 +73,7 @@ def test_config_with_environment_conditions():
 
     with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
         f.write('''
-@check("Production only", only="production")
+@check("Production only", only_in="production")
 def prod_check():
     make_sure(True)
 

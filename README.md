@@ -178,12 +178,12 @@ def daily_backup_check():
 ### Environment-Specific Checks
 
 ```python
-@check("Production database performance", only="production")
+@check("Production database performance", only_in="production")
 def prod_db_check():
     # Only runs in production environment
     expect(db.query_time()).to_be_less_than(10)
 
-@check("Development tools available", except_env=["production", "staging"])
+@check("Development tools available", except_in=["production", "staging"])
 def dev_tools_check():
     # Skipped in production and staging
     make_sure(debug_tools.available())

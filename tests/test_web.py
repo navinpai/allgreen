@@ -153,7 +153,7 @@ def pass_check():
 def fail_check():
     make_sure(False)
 
-@check("Skipped check", only="production")
+@check("Skipped check", only_in="production")
 def skip_check():
     make_sure(True)
 ''')
