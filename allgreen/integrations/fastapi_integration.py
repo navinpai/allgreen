@@ -43,7 +43,7 @@ def create_router(
     app_name: str = "FastAPI Application",
     config_path: str | None = None,
     environment: str | None = None,
-    prefix: str | None = None
+    prefix: str | None = None,
 ) -> APIRouter:
     """
     Create a FastAPI router with health check endpoints.
@@ -67,18 +67,16 @@ def create_router(
     @router.get("/healthcheck", response_class=HTMLResponse)
     @router.get("/healthcheck.json", response_class=JSONResponse)
     async def healthcheck_endpoint(request: Request):
-        return await _healthcheck_handler(
-            request, app_name, config_path, environment
-        )
+        return await _healthcheck_handler(request, app_name, config_path, environment)
 
     return router
 
 
 async def healthcheck_endpoint(
-    request: Request = None,
+    request: Request | None = None,
     app_name: str = "FastAPI Application",
     config_path: str | None = None,
-    environment: str | None = None
+    environment: str | None = None,
 ):
     """
     Standalone FastAPI health check endpoint.
@@ -95,7 +93,7 @@ async def _healthcheck_handler(
     request: Request | None,
     app_name: str,
     config_path: str | None,
-    environment: str | None
+    environment: str | None,
 ):
     """Internal handler for health check logic."""
 
@@ -120,9 +118,9 @@ async def _healthcheck_handler(
         accept_header = request.headers.get("accept", "")
         format_param = request.query_params.get("format")
         wants_json = (
-            "application/json" in accept_header or
-            format_param == "json" or
-            request.url.path.endswith(".json")
+            "application/json" in accept_header
+            or format_param == "json"
+            or request.url.path.endswith(".json")
         )
 
     # Determine HTTP status code
@@ -136,31 +134,29 @@ async def _healthcheck_handler(
         response_data = _format_json_response(
             results, stats, overall_status, app_name, environment
         )
-        return JSONResponse(content=response_data, status_code=status_code, headers=headers)
+        return JSONResponse(
+            content=response_data, status_code=status_code, headers=headers
+        )
     else:
         # Return HTML response
         context = {
-            'results': results,
-            'stats': stats,
-            'overall_status': overall_status,
-            'app_name': app_name,
-            'environment': environment,
-            'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "results": results,
+            "stats": stats,
+            "overall_status": overall_status,
+            "app_name": app_name,
+            "environment": environment,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
 
         html_content = _render_html_template(context)
-        return HTMLResponse(content=html_content, status_code=status_code, headers=headers)
+        return HTMLResponse(
+            content=html_content, status_code=status_code, headers=headers
+        )
 
 
 def _calculate_stats(results):
     """Calculate statistics from check results."""
-    stats = {
-        "total": len(results),
-        "passed": 0,
-        "failed": 0,
-        "skipped": 0,
-        "error": 0
-    }
+    stats = {"total": len(results), "passed": 0, "failed": 0, "skipped": 0, "error": 0}
 
     for _, result in results:
         if result.status == CheckStatus.PASSED:
@@ -194,14 +190,16 @@ def _format_json_response(results, stats, overall_status, app_name, environment)
     """Format results for JSON response."""
     json_results = []
     for check, result in results:
-        json_results.append({
-            "description": check.description,
-            "status": result.status.value,
-            "message": result.message,
-            "error": result.error,
-            "duration_ms": result.duration_ms,
-            "skip_reason": result.skip_reason,
-        })
+        json_results.append(
+            {
+                "description": check.description,
+                "status": result.status.value,
+                "message": result.message,
+                "error": result.error,
+                "duration_ms": result.duration_ms,
+                "skip_reason": result.skip_reason,
+            }
+        )
 
     return {
         "status": overall_status,
@@ -216,7 +214,7 @@ def _format_json_response(results, stats, overall_status, app_name, environment)
 def _render_html_template(context):
     """Render HTML template using the shared template."""
     # Use the shared template from allgreen/templates/
-    template_dir = os.path.join(os.path.dirname(allgreen.__file__), 'templates')
+    template_dir = os.path.join(os.path.dirname(allgreen.__file__), "templates")
     env = Environment(loader=FileSystemLoader(template_dir))
-    template = env.get_template('healthcheck.html')
+    template = env.get_template("healthcheck.html")
     return template.render(**context)

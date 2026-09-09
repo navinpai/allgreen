@@ -78,7 +78,7 @@ class RateLimitTracker:
     def _get_cache_file(self, check_id: str) -> Path:
         """Get the cache file path for a specific check."""
         # Use check description as ID, but sanitize for filesystem
-        safe_id = re.sub(r'[^\w\-_.]', '_', check_id)
+        safe_id = re.sub(r"[^\w\-_.]", "_", check_id)
         return self.cache_dir / f"{safe_id}.pkl"
 
     def _load_state(self, check_id: str) -> dict:
@@ -123,10 +123,7 @@ class RateLimitTracker:
             current_period_start = state.get("period_start")
 
             # If we're in a new period, reset the counter
-            if (
-                current_period_start is None
-                or period_start > current_period_start
-            ):
+            if current_period_start is None or period_start > current_period_start:
                 state = {
                     "count": 0,
                     "period_start": period_start,
@@ -142,7 +139,9 @@ class RateLimitTracker:
                 if remaining_time.total_seconds() > 0:
                     # Format remaining time
                     if remaining_time.days > 0:
-                        time_str = f"{remaining_time.days}d {remaining_time.seconds // 3600}h"
+                        time_str = (
+                            f"{remaining_time.days}d {remaining_time.seconds // 3600}h"
+                        )
                     elif remaining_time.seconds > 3600:
                         time_str = f"{remaining_time.seconds // 3600}h {(remaining_time.seconds % 3600) // 60}m"
                     else:
@@ -181,10 +180,8 @@ class RateLimitTracker:
             period_start = config.get_period_start(now)
 
             # If we're in a new period, all runs are available
-            if (
-                state.get("period_start") is None
-                or period_start > state.get("period_start")
-            ):
+            stored_period_start = state.get("period_start")
+            if stored_period_start is None or period_start > stored_period_start:
                 remaining = config.count
             else:
                 remaining = max(0, config.count - state.get("count", 0))

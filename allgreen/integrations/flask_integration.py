@@ -16,13 +16,13 @@ class HealthCheckApp:
         app_name: str = "Application",
         config_path: str | None = None,
         environment: str | None = None,
-        auto_reload_config: bool = True
+        auto_reload_config: bool = True,
     ):
         self.app_name = app_name
         self.config_path = config_path
-        self.environment = environment or os.getenv("ENVIRONMENT", "development")
+        self.environment: str = environment or os.getenv("ENVIRONMENT") or "development"
         self.auto_reload_config = auto_reload_config
-        self._last_config_mtime = None
+        self._last_config_mtime: float | None = None
 
         # Load initial config
         if auto_reload_config or not get_registry().get_checks():
@@ -36,7 +36,10 @@ class HealthCheckApp:
         # Check if we should reload config based on file modification time
         if self.config_path and os.path.exists(self.config_path):
             current_mtime = os.path.getmtime(self.config_path)
-            if self._last_config_mtime is None or current_mtime > self._last_config_mtime:
+            if (
+                self._last_config_mtime is None
+                or current_mtime > self._last_config_mtime
+            ):
                 self._last_config_mtime = current_mtime
                 return load_config(self.config_path, self.environment)
         elif not self.config_path:
@@ -45,14 +48,16 @@ class HealthCheckApp:
 
         return True
 
-    def _calculate_stats(self, results: list[tuple[Check, CheckResult]]) -> dict[str, int]:
+    def _calculate_stats(
+        self, results: list[tuple[Check, CheckResult]]
+    ) -> dict[str, int]:
         """Calculate statistics from check results."""
         stats = {
             "total": len(results),
             "passed": 0,
             "failed": 0,
             "skipped": 0,
-            "error": 0
+            "error": 0,
         }
 
         for _, result in results:
@@ -81,7 +86,9 @@ class HealthCheckApp:
         else:
             return "unknown"
 
-    def run_health_checks(self) -> tuple[list[tuple[Check, CheckResult]], dict[str, Any]]:
+    def run_health_checks(
+        self,
+    ) -> tuple[list[tuple[Check, CheckResult]], dict[str, Any]]:
         """Run all health checks and return results with metadata."""
         # Reload config if needed
         self._load_config()
@@ -112,11 +119,7 @@ class HealthCheckApp:
         status_code = 200 if metadata["overall_status"] == "passed" else 503
 
         # Render template
-        html = render_template(
-            "healthcheck.html",
-            results=results,
-            **metadata
-        )
+        html = render_template("healthcheck.html", results=results, **metadata)
 
         # Add Cache-Control headers
         headers = {"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"}
@@ -130,14 +133,16 @@ class HealthCheckApp:
         # Convert results to JSON-serializable format
         json_results = []
         for check, result in results:
-            json_results.append({
-                "description": check.description,
-                "status": result.status.value,
-                "message": result.message,
-                "error": result.error,
-                "duration_ms": result.duration_ms,
-                "skip_reason": result.skip_reason,
-            })
+            json_results.append(
+                {
+                    "description": check.description,
+                    "status": result.status.value,
+                    "message": result.message,
+                    "error": result.error,
+                    "duration_ms": result.duration_ms,
+                    "skip_reason": result.skip_reason,
+                }
+            )
 
         response_data = {
             "status": metadata["overall_status"],
@@ -162,16 +167,16 @@ def create_healthcheck_blueprint(
     config_path: str | None = None,
     environment: str | None = None,
     auto_reload_config: bool = True,
-    url_prefix: str | None = None
+    url_prefix: str | None = None,
 ) -> Blueprint:
     """Create a Blueprint with health check endpoints."""
 
     # Create blueprint
     blueprint = Blueprint(
-        'healthcheck',
+        "healthcheck",
         __name__,
-        template_folder=os.path.join(os.path.dirname(allgreen.__file__), 'templates'),
-        url_prefix=url_prefix
+        template_folder=os.path.join(os.path.dirname(allgreen.__file__), "templates"),
+        url_prefix=url_prefix,
     )
 
     # Create health check instance
@@ -179,7 +184,7 @@ def create_healthcheck_blueprint(
         app_name=app_name,
         config_path=config_path,
         environment=environment,
-        auto_reload_config=auto_reload_config
+        auto_reload_config=auto_reload_config,
     )
 
     @blueprint.route("/healthcheck")
@@ -215,19 +220,24 @@ def create_app(
     config_path: str | None = None,
     environment: str | None = None,
     auto_reload_config: bool = True,
-    flask_app: Flask | None = None
+    flask_app: Flask | None = None,
 ) -> Flask:
     """Create and configure a Flask app with health check endpoints."""
 
     if flask_app is None:
-        flask_app = Flask(__name__, template_folder=os.path.join(os.path.dirname(allgreen.__file__), 'templates'))
+        flask_app = Flask(
+            __name__,
+            template_folder=os.path.join(
+                os.path.dirname(allgreen.__file__), "templates"
+            ),
+        )
 
     # Create and register blueprint
     blueprint = create_healthcheck_blueprint(
         app_name=app_name,
         config_path=config_path,
         environment=environment,
-        auto_reload_config=auto_reload_config
+        auto_reload_config=auto_reload_config,
     )
     flask_app.register_blueprint(blueprint)
 
@@ -240,7 +250,7 @@ def mount_healthcheck(
     config_path: str | None = None,
     environment: str | None = None,
     auto_reload_config: bool = True,
-    url_prefix: str | None = None
+    url_prefix: str | None = None,
 ) -> Flask:
     """Mount health check routes on an existing Flask app."""
 
@@ -250,7 +260,7 @@ def mount_healthcheck(
         config_path=config_path,
         environment=environment,
         auto_reload_config=auto_reload_config,
-        url_prefix=url_prefix
+        url_prefix=url_prefix,
     )
     app.register_blueprint(blueprint)
 
@@ -259,10 +269,7 @@ def mount_healthcheck(
 
 # For standalone usage
 def run_standalone(
-    host: str = "127.0.0.1",
-    port: int = 5000,
-    debug: bool = True,
-    **kwargs
+    host: str = "127.0.0.1", port: int = 5000, debug: bool = True, **kwargs
 ):
     """Run a standalone health check server."""
     app = create_app(**kwargs)
