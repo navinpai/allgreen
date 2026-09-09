@@ -29,7 +29,7 @@ def render_prometheus_metrics(results: list[tuple[Check, CheckResult]]) -> str:
 
     status_counts = {
         "passed": stats["passed"],
-        "failed": stats["failed"] - stats["error"],  # Undo the failed+error merge
+        "failed": stats["failed"],
         "skipped": stats["skipped"],
         "error": stats["error"],
     }

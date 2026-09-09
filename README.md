@@ -247,7 +247,9 @@ Access `/healthcheck.json` or `/healthcheck?format=json` for machine-readable ou
     "total": 8,
     "passed": 6,
     "failed": 1,
-    "skipped": 1
+    "skipped": 1,
+    "error": 0,
+    "failing": 1
   },
   "checks": [
     {

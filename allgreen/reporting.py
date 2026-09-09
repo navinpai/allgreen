@@ -9,8 +9,8 @@ from .core import Check, CheckResult, CheckStatus
 def calculate_stats(results: list[tuple[Check, CheckResult]]) -> dict[str, int]:
     """Calculate statistics from check results.
 
-    Note: "failed" includes errors for simpler display; the raw error count
-    is preserved in "error".
+    "passed"/"failed"/"skipped"/"error" are raw per-status counts;
+    "failing" is the combined failed + error count for display purposes.
     """
     stats = {
         "total": len(results),
@@ -30,14 +30,14 @@ def calculate_stats(results: list[tuple[Check, CheckResult]]) -> dict[str, int]:
         elif result.status == CheckStatus.ERROR:
             stats["error"] += 1
 
-    stats["failed"] += stats["error"]
+    stats["failing"] = stats["failed"] + stats["error"]
 
     return stats
 
 
 def get_overall_status(stats: dict[str, int]) -> str:
     """Determine overall health status."""
-    if stats["failed"] > 0:
+    if stats["failing"] > 0:
         return "failed"
     elif stats["total"] == stats["skipped"]:
         return "no_checks"
