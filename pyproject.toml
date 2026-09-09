@@ -61,6 +61,7 @@ include = ["allgreen*"]
 allgreen = [
     "templates/**/*.html",
     "integrations/*.py",
+    "py.typed",
 ]
 
 [tool.ruff]
