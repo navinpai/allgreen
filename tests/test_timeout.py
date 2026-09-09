@@ -127,8 +127,7 @@ class TestTimeoutFunctionality:
         assert "Something went wrong" in result.message  # Should have traceback
 
     @pytest.mark.skipif(
-        not hasattr(time, 'sleep'),
-        reason="Platform doesn't support sleep"
+        not hasattr(time, "sleep"), reason="Platform doesn't support sleep"
     )
     def test_very_short_timeout(self):
         """Test very short timeouts work correctly."""

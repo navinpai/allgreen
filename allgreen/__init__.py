@@ -41,23 +41,28 @@ try:
         mount_healthcheck,
         run_standalone,
     )
-    __all__.extend([
-        "create_app",
-        "mount_healthcheck",
-        "run_standalone",
-        "HealthCheckApp",
-    ])
+
+    __all__.extend(
+        [
+            "create_app",
+            "mount_healthcheck",
+            "run_standalone",
+            "HealthCheckApp",
+        ]
+    )
 except ImportError:
     pass
 
 try:
     from .integrations import django_integration  # noqa: F401
+
     __all__.append("django_integration")
 except ImportError:
     pass
 
 try:
     from .integrations import fastapi_integration  # noqa: F401
+
     __all__.append("fastapi_integration")
 except ImportError:
     pass

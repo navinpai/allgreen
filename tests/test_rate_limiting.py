@@ -69,18 +69,24 @@ class TestRateLimitTracker:
             check_id = "test_check"
 
             # First run should be allowed
-            should_run, skip_reason, cached_result = tracker.should_run_check(check_id, config)
+            should_run, skip_reason, cached_result = tracker.should_run_check(
+                check_id, config
+            )
             assert should_run is True
             assert skip_reason is None
             assert cached_result is None
 
             # Second run should be allowed
-            should_run, skip_reason, cached_result = tracker.should_run_check(check_id, config)
+            should_run, skip_reason, cached_result = tracker.should_run_check(
+                check_id, config
+            )
             assert should_run is True
             assert skip_reason is None
 
             # Third run should be rate limited
-            should_run, skip_reason, cached_result = tracker.should_run_check(check_id, config)
+            should_run, skip_reason, cached_result = tracker.should_run_check(
+                check_id, config
+            )
             assert should_run is False
             assert "Rate limited" in skip_reason
             assert "2/2 runs used" in skip_reason
@@ -121,12 +127,14 @@ class TestRateLimitTracker:
             result = {
                 "status": "passed",
                 "message": "Test passed",
-                "duration_ms": 100.0
+                "duration_ms": 100.0,
             }
             tracker.record_result(check_id, result)
 
             # Should get cached result when rate limited
-            should_run, skip_reason, cached_result = tracker.should_run_check(check_id, config)
+            should_run, skip_reason, cached_result = tracker.should_run_check(
+                check_id, config
+            )
             assert should_run is False
             assert cached_result == result
 

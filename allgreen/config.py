@@ -50,17 +50,17 @@ class ConfigLoader:
             # Note: Config files should use absolute imports only.
             # Relative imports are not supported to avoid sys.path conflicts.
             namespace = {
-                '__file__': config_file,
-                '__name__': '__main__',
-                'check': check,
-                'expect': expect,
-                'make_sure': make_sure,
-                'ENVIRONMENT': environment,
+                "__file__": config_file,
+                "__name__": "__main__",
+                "check": check,
+                "expect": expect,
+                "make_sure": make_sure,
+                "ENVIRONMENT": environment,
             }
 
             # Execute the config file
             with open(config_file) as f:
-                code = compile(f.read(), config_file, 'exec')
+                code = compile(f.read(), config_file, "exec")
                 exec(code, namespace)
 
             self._loaded_path = config_file
@@ -79,7 +79,9 @@ class ConfigLoader:
 # Import these here to avoid circular imports
 
 
-def load_config(config_path: str | None = None, environment: str = "development") -> bool:
+def load_config(
+    config_path: str | None = None, environment: str = "development"
+) -> bool:
     """Convenience function to load configuration."""
     loader = ConfigLoader(config_path)
     return loader.load_config(environment)

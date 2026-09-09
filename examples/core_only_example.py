@@ -21,21 +21,26 @@ from allgreen import check, expect, get_registry, load_config, make_sure
 @check("System has enough memory")
 def memory_check():
     import psutil
+
     try:
         memory = psutil.virtual_memory()
         expect(memory.percent).to_be_less_than(90)
     except ImportError:
         make_sure(True, "psutil not available - assuming memory is OK")
 
+
 @check("Basic math still works")
 def math_check():
     expect(2 + 2).to_eq(4)
     expect(10).to_be_greater_than(5)
 
+
 @check("Environment variables accessible")
 def env_check():
     import os
-    make_sure('PATH' in os.environ, "PATH should be set")
+
+    make_sure("PATH" in os.environ, "PATH should be set")
+
 
 def run_health_checks():
     """Run all health checks and return results."""
@@ -51,11 +56,12 @@ def run_health_checks():
 
     return results
 
+
 def print_results_table(results):
     """Print results in a nice table format."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print(f"{'STATUS':<10} {'DURATION':<10} {'DESCRIPTION':<30} {'MESSAGE'}")
-    print("="*80)
+    print("=" * 80)
 
     passed = failed = skipped = 0
 
@@ -81,41 +87,51 @@ def print_results_table(results):
         if result.skip_reason:
             message = f"Skipped: {result.skip_reason}"
         elif result.message and not result.passed:
-            message = result.message[:40] + "..." if len(result.message) > 40 else result.message
+            message = (
+                result.message[:40] + "..."
+                if len(result.message) > 40
+                else result.message
+            )
 
-        print(f"{status_icon:<10} {duration:<10} {check_obj.description[:30]:<30} {message}")
+        print(
+            f"{status_icon:<10} {duration:<10} {check_obj.description[:30]:<30} {message}"
+        )
 
-    print("="*80)
+    print("=" * 80)
     print(f"Summary: {passed} passed, {failed} failed, {skipped} skipped")
     return passed, failed, skipped
+
 
 def export_json_results(results, filename="health_check_results.json"):
     """Export results to JSON file."""
     json_results = []
     for check_obj, result in results:
-        json_results.append({
-            "description": check_obj.description,
-            "status": result.status.value,
-            "passed": result.passed,
-            "message": result.message,
-            "error": result.error,
-            "duration_ms": result.duration_ms,
-            "skip_reason": result.skip_reason,
-        })
+        json_results.append(
+            {
+                "description": check_obj.description,
+                "status": result.status.value,
+                "passed": result.passed,
+                "message": result.message,
+                "error": result.error,
+                "duration_ms": result.duration_ms,
+                "skip_reason": result.skip_reason,
+            }
+        )
 
     output = {
         "timestamp": "2023-01-01 12:00:00",  # Would use real timestamp
         "environment": "development",
         "total_checks": len(results),
-        "results": json_results
+        "results": json_results,
     }
 
-    with open(filename, 'w') as f:
+    with open(filename, "w") as f:
         json.dump(output, f, indent=2)
 
     print(f"📄 Results exported to {filename}")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     print("🚀 Allgreen Core-Only Example")
     print("💡 No web framework dependencies required!")
     print("\nRunning health checks...")

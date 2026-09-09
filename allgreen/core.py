@@ -77,19 +77,23 @@ def execute_with_robust_timeout(func: Callable, timeout_seconds: float) -> Any:
 
     # For very short timeouts or main thread + Unix, use signals (fastest)
     is_main_thread = threading.current_thread() is threading.main_thread()
-    if hasattr(signal, 'SIGALRM') and is_main_thread and timeout_seconds >= 0.1:
+    if hasattr(signal, "SIGALRM") and is_main_thread and timeout_seconds >= 0.1:
         # Signal-based timeout for quick execution in main thread
         with timeout_context(int(timeout_seconds) or 1):
             return func()
     else:
         # Worker thread with hard timeout for robust interruption
-        with ThreadPoolExecutor(max_workers=1, thread_name_prefix="allgreen_timeout") as executor:
+        with ThreadPoolExecutor(
+            max_workers=1, thread_name_prefix="allgreen_timeout"
+        ) as executor:
             future = executor.submit(func)
             try:
                 return future.result(timeout=timeout_seconds)
             except FutureTimeoutError:
                 # The worker thread will be abandoned and eventually cleaned up
-                raise CheckTimeoutError(f"Check timed out after {timeout_seconds:.1f} seconds") from None
+                raise CheckTimeoutError(
+                    f"Check timed out after {timeout_seconds:.1f} seconds"
+                ) from None
 
 
 async def execute_with_async_timeout(func: Callable, timeout_seconds: float) -> Any:
@@ -108,14 +112,17 @@ async def execute_with_async_timeout(func: Callable, timeout_seconds: float) -> 
 
     loop = asyncio.get_running_loop()
 
-    with ThreadPoolExecutor(max_workers=1, thread_name_prefix="allgreen_async") as executor:
+    with ThreadPoolExecutor(
+        max_workers=1, thread_name_prefix="allgreen_async"
+    ) as executor:
         try:
             return await asyncio.wait_for(
-                loop.run_in_executor(executor, func),
-                timeout=timeout_seconds
+                loop.run_in_executor(executor, func), timeout=timeout_seconds
             )
         except asyncio.TimeoutError:
-            raise CheckTimeoutError(f"Check timed out after {timeout_seconds:.1f} seconds") from None
+            raise CheckTimeoutError(
+                f"Check timed out after {timeout_seconds:.1f} seconds"
+            ) from None
 
 
 @contextmanager
@@ -124,7 +131,7 @@ def timeout_context(seconds: int):
     # Check if we're in the main thread and signals are available
     is_main_thread = threading.current_thread() is threading.main_thread()
 
-    if hasattr(signal, 'SIGALRM') and is_main_thread:
+    if hasattr(signal, "SIGALRM") and is_main_thread:
         # Unix systems in main thread - use signals (more reliable)
         def timeout_handler(signum, frame):
             raise CheckTimeoutError(f"Check timed out after {seconds} seconds")
@@ -162,9 +169,7 @@ class Expectation:
 
     def to_eq(self, expected: Any) -> None:
         if self.actual != expected:
-            raise CheckAssertionError(
-                f"Expected {self.actual!r} to equal {expected!r}"
-            )
+            raise CheckAssertionError(f"Expected {self.actual!r} to equal {expected!r}")
 
     def to_be_greater_than(self, expected: int | float) -> None:
         if not (isinstance(self.actual, (int, float)) and self.actual > expected):
@@ -217,7 +222,10 @@ class Check:
     def should_run(self, environment: str = "development") -> tuple[bool, str | None]:
         # Check environment conditions
         if self.only_in and environment not in self.only_in:
-            return False, f"Only runs in {', '.join(self.only_in)}, current: {environment}"
+            return (
+                False,
+                f"Only runs in {', '.join(self.only_in)}, current: {environment}",
+            )
 
         if self.except_in and environment in self.except_in:
             return False, f"Skipped in {environment} environment"
@@ -239,34 +247,38 @@ class Check:
         # Check basic conditions (environment, if_condition)
         should_run, skip_reason = self.should_run(environment)
         if not should_run:
-            return CheckResult(
-                status=CheckStatus.SKIPPED,
-                skip_reason=skip_reason
-            )
+            return CheckResult(status=CheckStatus.SKIPPED, skip_reason=skip_reason)
 
         # Check rate limiting if specified
         if self.run:
-            should_run_rate, skip_reason_rate, cached_result = self._check_rate_limit(environment)
+            should_run_rate, skip_reason_rate, cached_result = self._check_rate_limit(
+                environment
+            )
             if not should_run_rate:
                 # Return cached result if we have one, otherwise create skipped result
                 if cached_result:
                     # Use the cached result's actual status (PASSED/FAILED/ERROR)
                     # but indicate it's cached in the message
-                    original_message = cached_result.get('message', '')
+                    original_message = cached_result.get("message", "")
                     cache_indicator = " (cached result)"
-                    cached_message = f"{original_message}{cache_indicator}" if original_message else "Cached result"
+                    cached_message = (
+                        f"{original_message}{cache_indicator}"
+                        if original_message
+                        else "Cached result"
+                    )
 
                     return CheckResult(
-                        status=CheckStatus(cached_result['status']),  # Use original status
+                        status=CheckStatus(
+                            cached_result["status"]
+                        ),  # Use original status
                         message=cached_message,
-                        error=cached_result.get('error'),
-                        duration_ms=cached_result.get('duration_ms', 0),
-                        skip_reason=None  # Not actually skipped, just cached
+                        error=cached_result.get("error"),
+                        duration_ms=cached_result.get("duration_ms", 0),
+                        skip_reason=None,  # Not actually skipped, just cached
                     )
                 else:
                     return CheckResult(
-                        status=CheckStatus.SKIPPED,
-                        skip_reason=skip_reason_rate
+                        status=CheckStatus.SKIPPED, skip_reason=skip_reason_rate
                     )
 
         start_time = time.time()
@@ -278,7 +290,7 @@ class Check:
             result = CheckResult(
                 status=CheckStatus.PASSED,
                 message="Check passed",
-                duration_ms=duration_ms
+                duration_ms=duration_ms,
             )
 
             # Cache result for rate-limited checks
@@ -293,7 +305,7 @@ class Check:
                 status=CheckStatus.ERROR,
                 error=str(e),
                 message="Check timed out",
-                duration_ms=duration_ms
+                duration_ms=duration_ms,
             )
             if self.run:
                 self._cache_result(result, environment)
@@ -302,9 +314,7 @@ class Check:
         except CheckAssertionError as e:
             duration_ms = (time.time() - start_time) * 1000
             result = CheckResult(
-                status=CheckStatus.FAILED,
-                message=str(e),
-                duration_ms=duration_ms
+                status=CheckStatus.FAILED, message=str(e), duration_ms=duration_ms
             )
             if self.run:
                 self._cache_result(result, environment)
@@ -316,7 +326,7 @@ class Check:
                 status=CheckStatus.ERROR,
                 error=f"{type(e).__name__}: {e}",
                 message=traceback.format_exc(),
-                duration_ms=duration_ms
+                duration_ms=duration_ms,
             )
             if self.run:
                 self._cache_result(result, environment)
@@ -331,34 +341,38 @@ class Check:
         # Check basic conditions (environment, if_condition)
         should_run, skip_reason = self.should_run(environment)
         if not should_run:
-            return CheckResult(
-                status=CheckStatus.SKIPPED,
-                skip_reason=skip_reason
-            )
+            return CheckResult(status=CheckStatus.SKIPPED, skip_reason=skip_reason)
 
         # Check rate limiting if specified
         if self.run:
-            should_run_rate, skip_reason_rate, cached_result = self._check_rate_limit(environment)
+            should_run_rate, skip_reason_rate, cached_result = self._check_rate_limit(
+                environment
+            )
             if not should_run_rate:
                 # Return cached result if we have one, otherwise create skipped result
                 if cached_result:
                     # Use the cached result's actual status (PASSED/FAILED/ERROR)
                     # but indicate it's cached in the message
-                    original_message = cached_result.get('message', '')
+                    original_message = cached_result.get("message", "")
                     cache_indicator = " (cached result)"
-                    cached_message = f"{original_message}{cache_indicator}" if original_message else "Cached result"
+                    cached_message = (
+                        f"{original_message}{cache_indicator}"
+                        if original_message
+                        else "Cached result"
+                    )
 
                     return CheckResult(
-                        status=CheckStatus(cached_result['status']),  # Use original status
+                        status=CheckStatus(
+                            cached_result["status"]
+                        ),  # Use original status
                         message=cached_message,
-                        error=cached_result.get('error'),
-                        duration_ms=cached_result.get('duration_ms', 0),
-                        skip_reason=None  # Not actually skipped, just cached
+                        error=cached_result.get("error"),
+                        duration_ms=cached_result.get("duration_ms", 0),
+                        skip_reason=None,  # Not actually skipped, just cached
                     )
                 else:
                     return CheckResult(
-                        status=CheckStatus.SKIPPED,
-                        skip_reason=skip_reason_rate
+                        status=CheckStatus.SKIPPED, skip_reason=skip_reason_rate
                     )
 
         start_time = time.time()
@@ -370,7 +384,7 @@ class Check:
             result = CheckResult(
                 status=CheckStatus.PASSED,
                 message="Check passed",
-                duration_ms=duration_ms
+                duration_ms=duration_ms,
             )
 
             # Cache result for rate-limited checks
@@ -385,7 +399,7 @@ class Check:
                 status=CheckStatus.ERROR,
                 error=str(e),
                 message="Check timed out",
-                duration_ms=duration_ms
+                duration_ms=duration_ms,
             )
             if self.run:
                 self._cache_result(result, environment)
@@ -394,9 +408,7 @@ class Check:
         except CheckAssertionError as e:
             duration_ms = (time.time() - start_time) * 1000
             result = CheckResult(
-                status=CheckStatus.FAILED,
-                message=str(e),
-                duration_ms=duration_ms
+                status=CheckStatus.FAILED, message=str(e), duration_ms=duration_ms
             )
             if self.run:
                 self._cache_result(result, environment)
@@ -408,13 +420,15 @@ class Check:
                 status=CheckStatus.ERROR,
                 error=f"{type(e).__name__}: {e}",
                 message=traceback.format_exc(),
-                duration_ms=duration_ms
+                duration_ms=duration_ms,
             )
             if self.run:
                 self._cache_result(result, environment)
             return result
 
-    def _check_rate_limit(self, environment: str | None = None) -> tuple[bool, str | None, dict | None]:
+    def _check_rate_limit(
+        self, environment: str | None = None
+    ) -> tuple[bool, str | None, dict | None]:
         """Check if this rate-limited check should run."""
         if not self.run:
             return True, None, None
@@ -427,14 +441,20 @@ class Check:
             tracker = get_rate_tracker()
 
             # Create a namespaced key to avoid collisions between environments
-            check_key = f"{environment}::{self.description}" if environment else self.description
+            check_key = (
+                f"{environment}::{self.description}"
+                if environment
+                else self.description
+            )
 
             return tracker.should_run_check(check_key, config)
         except ValueError:
             # Invalid rate limit pattern - run the check but log error
             return True, None, None
 
-    def _cache_result(self, result: CheckResult, environment: str | None = None) -> None:
+    def _cache_result(
+        self, result: CheckResult, environment: str | None = None
+    ) -> None:
         """Cache the result of a rate-limited check."""
         if not self.run:
             return
@@ -452,7 +472,9 @@ class Check:
         tracker = get_rate_tracker()
 
         # Use the same namespaced key as _check_rate_limit
-        check_key = f"{environment}::{self.description}" if environment else self.description
+        check_key = (
+            f"{environment}::{self.description}" if environment else self.description
+        )
 
         tracker.record_result(check_key, result_dict)
 
@@ -470,14 +492,18 @@ class CheckRegistry:
     def clear(self) -> None:
         self._checks.clear()
 
-    def run_all(self, environment: str = "development") -> list[tuple[Check, CheckResult]]:
+    def run_all(
+        self, environment: str = "development"
+    ) -> list[tuple[Check, CheckResult]]:
         results = []
         for check in self._checks:
             result = check.execute(environment)
             results.append((check, result))
         return results
 
-    async def run_all_async(self, environment: str = "development") -> list[tuple[Check, CheckResult]]:
+    async def run_all_async(
+        self, environment: str = "development"
+    ) -> list[tuple[Check, CheckResult]]:
         """
         Run all checks asynchronously without blocking the event loop.
 

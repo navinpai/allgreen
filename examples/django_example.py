@@ -20,33 +20,33 @@ Run:
 import os
 
 # Minimal Django setup for this example
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', '__main__')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "__main__")
 
 # Django settings (inline for this example)
 DEBUG = True
-SECRET_KEY = 'django-example-key-not-for-production'
-ROOT_URLCONF = '__main__'
+SECRET_KEY = "django-example-key-not-for-production"
+ROOT_URLCONF = "__main__"
 USE_TZ = True
 INSTALLED_APPS = [
-    'django.contrib.contenttypes',
-    'django.contrib.auth',
+    "django.contrib.contenttypes",
+    "django.contrib.auth",
 ]
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
             ],
         },
     },
 ]
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import django
     from django.conf import settings
     from django.core.management import execute_from_command_line
@@ -69,16 +69,16 @@ if __name__ == '__main__':
 
     # Views
     def index(request):
-        return HttpResponse('''
+        return HttpResponse("""
         <h1>Django + Allgreen Example</h1>
         <p><a href="/healthcheck/">View Health Checks</a></p>
         <p><a href="/healthcheck/?format=json">JSON API</a></p>
-        ''')
+        """)
 
     # URL patterns
     urlpatterns = [
-        path('', index),
-        path('healthcheck/', healthcheck_view, name='healthcheck'),
+        path("", index),
+        path("healthcheck/", healthcheck_view, name="healthcheck"),
     ]
 
     print("🚀 Django + Allgreen Example")
@@ -88,4 +88,4 @@ if __name__ == '__main__':
     print()
 
     # Run Django dev server
-    execute_from_command_line(['manage.py', 'runserver', '8000'])
+    execute_from_command_line(["manage.py", "runserver", "8000"])

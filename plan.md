@@ -45,7 +45,7 @@ allgreen/
 
 ### DSL Functions
 ```python
-check("Database is accessible") 
+check("Database is accessible")
 make_sure(condition, message=None)
 expect(actual).to_eq(expected)
 expect(actual).to_be_greater_than(expected)
@@ -78,10 +78,12 @@ check("...", run="4 times per hour")
 ```python
 # In your app
 from allgreen import mount_healthcheck
+
 app = mount_healthcheck(app, config_path="allgood.py")
 
 # Or standalone
 from allgreen import create_app
+
 healthcheck_app = create_app("allgood.py")
 ```
 

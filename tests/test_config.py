@@ -8,8 +8,8 @@ def test_find_config_file():
     # Test with a temporary config file
     with tempfile.TemporaryDirectory() as tmpdir:
         config_path = os.path.join(tmpdir, "allgreen_config.py")
-        with open(config_path, 'w') as f:
-            f.write('# test config')
+        with open(config_path, "w") as f:
+            f.write("# test config")
 
         # Change to temp directory
         original_cwd = os.getcwd()
@@ -28,8 +28,8 @@ def test_load_config_file():
     registry.clear()
 
     # Create a temporary config file
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
-        f.write('''
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+        f.write("""
 @check("Test config check")
 def test_check():
     make_sure(True)
@@ -37,7 +37,7 @@ def test_check():
 @check("Math check from config")
 def math_check():
     expect(5).to_be_greater_than(3)
-''')
+""")
         config_path = f.name
 
     try:
@@ -71,8 +71,8 @@ def test_config_with_environment_conditions():
     registry = get_registry()
     registry.clear()
 
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
-        f.write('''
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+        f.write("""
 @check("Production only", only_in="production")
 def prod_check():
     make_sure(True)
@@ -80,7 +80,7 @@ def prod_check():
 @check("Environment aware check")
 def env_check():
     make_sure(ENVIRONMENT in ["development", "production"])
-''')
+""")
         config_path = f.name
 
     try:

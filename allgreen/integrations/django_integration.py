@@ -66,7 +66,7 @@ class HealthCheckView(View):
             request,
             app_name=self.app_name,
             config_path=self.config_path,
-            environment=self.environment
+            environment=self.environment,
         )
 
 
@@ -75,7 +75,7 @@ def healthcheck_view(
     request: HttpRequest,
     app_name: str = "Django Application",
     config_path: str | None = None,
-    environment: str | None = None
+    environment: str | None = None,
 ) -> HttpResponse:
     """
     Django function-based view for health checks.
@@ -104,8 +104,8 @@ def healthcheck_view(
 
     # Determine response format
     wants_json = (
-        'application/json' in request.headers.get('Accept', '') or
-        request.GET.get('format') == 'json'
+        "application/json" in request.headers.get("Accept", "")
+        or request.GET.get("format") == "json"
     )
 
     # Determine HTTP status code
@@ -114,8 +114,10 @@ def healthcheck_view(
     if wants_json:
         # Return JSON response
         response = JsonResponse(
-            _format_json_response(results, stats, overall_status, app_name, environment),
-            status=status_code
+            _format_json_response(
+                results, stats, overall_status, app_name, environment
+            ),
+            status=status_code,
         )
     else:
         # Return HTML response
@@ -124,41 +126,39 @@ def healthcheck_view(
         for check, result in results:
             # Create a copy of result with formatted duration
             result_dict = {
-                'status': result.status,
-                'message': result.message,
-                'error': result.error,
-                'duration_ms': result.duration_ms,
-                'duration_formatted': f"{result.duration_ms:.1f}" if result.duration_ms is not None else None,
-                'skip_reason': result.skip_reason,
+                "status": result.status,
+                "message": result.message,
+                "error": result.error,
+                "duration_ms": result.duration_ms,
+                "duration_formatted": f"{result.duration_ms:.1f}"
+                if result.duration_ms is not None
+                else None,
+                "skip_reason": result.skip_reason,
             }
-            formatted_results.append((check, type('Result', (), result_dict)()))
+            formatted_results.append((check, type("Result", (), result_dict)()))
 
         context = {
-            'results': formatted_results,
-            'stats': stats,
-            'overall_status': overall_status,
-            'app_name': app_name,
-            'environment': environment,
-            'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "results": formatted_results,
+            "stats": stats,
+            "overall_status": overall_status,
+            "app_name": app_name,
+            "environment": environment,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
 
         html_content = _render_html_template(context)
-        response = HttpResponse(html_content, status=status_code, content_type='text/html')
+        response = HttpResponse(
+            html_content, status=status_code, content_type="text/html"
+        )
 
     # Add Cache-Control headers to prevent caching
-    response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     return response
 
 
 def _calculate_stats(results):
     """Calculate statistics from check results."""
-    stats = {
-        "total": len(results),
-        "passed": 0,
-        "failed": 0,
-        "skipped": 0,
-        "error": 0
-    }
+    stats = {"total": len(results), "passed": 0, "failed": 0, "skipped": 0, "error": 0}
 
     for _, result in results:
         if result.status == CheckStatus.PASSED:
@@ -192,14 +192,16 @@ def _format_json_response(results, stats, overall_status, app_name, environment)
     """Format results for JSON response."""
     json_results = []
     for check, result in results:
-        json_results.append({
-            "description": check.description,
-            "status": result.status.value,
-            "message": result.message,
-            "error": result.error,
-            "duration_ms": result.duration_ms,
-            "skip_reason": result.skip_reason,
-        })
+        json_results.append(
+            {
+                "description": check.description,
+                "status": result.status.value,
+                "message": result.message,
+                "error": result.error,
+                "duration_ms": result.duration_ms,
+                "skip_reason": result.skip_reason,
+            }
+        )
 
     return {
         "status": overall_status,
@@ -217,4 +219,4 @@ def _render_html_template(context):
 
     Uses the shared template at allgreen/healthcheck.html.
     """
-    return render_to_string('allgreen/healthcheck.html', context)
+    return render_to_string("allgreen/healthcheck.html", context)
