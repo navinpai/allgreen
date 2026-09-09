@@ -544,6 +544,14 @@ class CheckRegistry:
     def clear(self) -> None:
         self._checks.clear()
 
+    def replace(self, checks: list[Check]) -> None:
+        """Atomically swap the registered checks.
+
+        Assigning a new list means in-flight run_all() iterations keep the
+        old snapshot instead of seeing a partially rebuilt registry.
+        """
+        self._checks = list(checks)
+
     def run_all(
         self, environment: str = "development"
     ) -> list[tuple[Check, CheckResult]]:

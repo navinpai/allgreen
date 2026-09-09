@@ -101,3 +101,85 @@ def env_check():
 
     finally:
         os.unlink(config_path)
+
+
+def test_config_not_reexecuted_when_unchanged():
+    registry = get_registry()
+    registry.clear()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        marker_path = os.path.join(tmpdir, "exec_count")
+        config_path = os.path.join(tmpdir, "allgreen_config.py")
+        with open(config_path, "w") as f:
+            f.write(f"""
+with open({marker_path!r}, "a") as marker:
+    marker.write("x")
+
+@check("Cached load check")
+def cached_check():
+    make_sure(True)
+""")
+
+        assert load_config(config_path)
+        assert load_config(config_path)
+
+        with open(marker_path) as f:
+            assert f.read() == "x"  # executed exactly once
+        assert len(registry.get_checks()) == 1
+
+
+def test_failed_reload_keeps_existing_checks():
+    registry = get_registry()
+    registry.clear()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config_path = os.path.join(tmpdir, "allgreen_config.py")
+        with open(config_path, "w") as f:
+            f.write("""
+@check("Original check")
+def original_check():
+    make_sure(True)
+""")
+
+        assert load_config(config_path)
+        assert len(registry.get_checks()) == 1
+
+        # Break the config and bump mtime to force a reload attempt
+        with open(config_path, "w") as f:
+            f.write("this is not valid python !!!")
+        os.utime(config_path, (0, 0))
+        os.utime(config_path)
+
+        assert not load_config(config_path)
+        checks = registry.get_checks()
+        assert len(checks) == 1
+        assert checks[0].description == "Original check"
+
+
+def test_config_reloaded_when_file_changes():
+    registry = get_registry()
+    registry.clear()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config_path = os.path.join(tmpdir, "allgreen_config.py")
+        with open(config_path, "w") as f:
+            f.write("""
+@check("First version")
+def first_check():
+    make_sure(True)
+""")
+
+        assert load_config(config_path)
+
+        with open(config_path, "w") as f:
+            f.write("""
+@check("Second version")
+def second_check():
+    make_sure(True)
+""")
+        os.utime(config_path)
+
+        assert load_config(config_path)
+        checks = registry.get_checks()
+        assert len(checks) == 1
+        assert checks[0].description == "Second version"

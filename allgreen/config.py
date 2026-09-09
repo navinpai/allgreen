@@ -1,6 +1,17 @@
+import logging
 import os
+import threading
+from typing import Any
 
-from .core import check, expect, get_registry, make_sure
+from .core import Check, expect, get_registry, make_sure
+
+logger = logging.getLogger(__name__)
+
+# Serializes config execution and guards the loaded-state cache so concurrent
+# requests (e.g. Prometheus scrape + uptime ping) can't re-exec the config
+# file simultaneously or observe a partially rebuilt registry.
+_load_lock = threading.Lock()
+_loaded_state: tuple[str, float, str] | None = None  # (path, mtime, environment)
 
 
 class ConfigLoader:
@@ -30,7 +41,15 @@ class ConfigLoader:
         return None
 
     def load_config(self, environment: str = "development") -> bool:
-        """Load configuration file and execute it to register checks."""
+        """Load configuration file and execute it to register checks.
+
+        The config is only (re-)executed when the file path, its mtime, or the
+        environment changes; otherwise this is a cheap no-op. Checks are staged
+        into a local list and swapped into the registry atomically, so a load
+        error leaves the previously registered checks intact.
+        """
+        global _loaded_state
+
         try:
             config_file = self.find_config_file()
             if not config_file:
@@ -38,34 +57,52 @@ class ConfigLoader:
         except FileNotFoundError:
             return False
 
-        # Clear existing checks if reloading
-        if self._loaded_path != config_file:
-            get_registry().clear()
-
         try:
+            mtime = os.path.getmtime(config_file)
+        except OSError:
+            return False
+
+        with _load_lock:
+            if (
+                _loaded_state == (config_file, mtime, environment)
+                and get_registry().get_checks()
+            ):
+                self._loaded_path = config_file
+                return True
+
+            staged: list[Check] = []
+
+            def staging_check(description: str, *args: Any, **kwargs: Any):
+                def decorator(func):
+                    staged.append(Check(description, func, *args, **kwargs))
+                    return func
+
+                return decorator
+
             # Create a namespace with our DSL functions
             # Note: Config files should use absolute imports only.
             # Relative imports are not supported to avoid sys.path conflicts.
-            namespace = {
+            namespace: dict[str, Any] = {
                 "__file__": config_file,
                 "__name__": "__main__",
-                "check": check,
+                "check": staging_check,
                 "expect": expect,
                 "make_sure": make_sure,
                 "ENVIRONMENT": environment,
             }
 
-            # Execute the config file
-            with open(config_file) as f:
-                code = compile(f.read(), config_file, "exec")
-                exec(code, namespace)
+            try:
+                with open(config_file) as f:
+                    code = compile(f.read(), config_file, "exec")
+                    exec(code, namespace)
+            except Exception:
+                logger.exception("Error loading config file %s", config_file)
+                return False
 
+            get_registry().replace(staged)
+            _loaded_state = (config_file, mtime, environment)
             self._loaded_path = config_file
             return True
-
-        except Exception as e:
-            print(f"Error loading config file {config_file}: {e}")
-            return False
 
     @property
     def loaded_path(self) -> str | None:
@@ -83,5 +120,5 @@ def load_config(
 
 def find_config() -> str | None:
     """Convenience function to find config file path."""
-    loader = ConfigLoader()
+    loader = ConfigLoader(config_path=None)
     return loader.find_config_file()
