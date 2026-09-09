@@ -1,6 +1,6 @@
 import os
 
-from .core import get_registry
+from .core import check, expect, get_registry, make_sure
 
 
 class ConfigLoader:
@@ -43,9 +43,6 @@ class ConfigLoader:
             get_registry().clear()
 
         try:
-            # Import DSL functions locally to avoid circular imports
-            from .core import check, expect, make_sure
-
             # Create a namespace with our DSL functions
             # Note: Config files should use absolute imports only.
             # Relative imports are not supported to avoid sys.path conflicts.
@@ -74,9 +71,6 @@ class ConfigLoader:
     def loaded_path(self) -> str | None:
         """Return the path of the currently loaded config file."""
         return self._loaded_path
-
-
-# Import these here to avoid circular imports
 
 
 def load_config(
