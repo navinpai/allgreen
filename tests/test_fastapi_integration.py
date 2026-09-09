@@ -129,6 +129,53 @@ def prefix_check():
         os.unlink(config_path)
 
 
+def test_async_check():
+    get_registry().clear()
+    config_path = _write_config("""
+import asyncio
+
+@check("Async check via FastAPI")
+async def async_check():
+    await asyncio.sleep(0.01)
+    make_sure(True)
+
+@check("Sync check alongside async")
+def sync_check():
+    make_sure(True)
+""")
+
+    try:
+        client = _make_client(config_path)
+        response = client.get("/healthcheck.json")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "passed"
+        assert data["stats"]["passed"] == 2
+    finally:
+        os.unlink(config_path)
+
+
+def test_async_check_failure():
+    get_registry().clear()
+    config_path = _write_config("""
+@check("Failing async check")
+async def failing_async_check():
+    make_sure(False, "Async check failed")
+""")
+
+    try:
+        client = _make_client(config_path)
+        response = client.get("/healthcheck.json")
+
+        assert response.status_code == 503
+        data = response.json()
+        assert data["status"] == "failed"
+        assert "Async check failed" in data["checks"][0]["message"]
+    finally:
+        os.unlink(config_path)
+
+
 def test_statistics():
     get_registry().clear()
     config_path = _write_config("""

@@ -172,3 +172,39 @@ def skip_check():
 
     finally:
         os.unlink(config_path)
+
+
+def test_healthcheck_with_async_check():
+    registry = get_registry()
+    registry.clear()
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+        f.write("""
+import asyncio
+
+@check("Async check via Flask")
+async def async_check():
+    await asyncio.sleep(0.01)
+    make_sure(True)
+
+@check("Sync check alongside async")
+def sync_check():
+    make_sure(True)
+""")
+        config_path = f.name
+
+    try:
+        app = create_app(
+            config_path=config_path, environment="test", auto_reload_config=False
+        )
+        client = app.test_client()
+
+        response = client.get("/healthcheck.json")
+        assert response.status_code == 200
+
+        data = response.get_json()
+        assert data["status"] == "passed"
+        assert data["stats"]["passed"] == 2
+
+    finally:
+        os.unlink(config_path)

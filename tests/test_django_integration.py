@@ -172,6 +172,33 @@ def skip_check():
         os.unlink(config_path)
 
 
+def test_async_check():
+    get_registry().clear()
+    config_path = _write_config("""
+import asyncio
+
+@check("Async check via Django")
+async def async_check():
+    await asyncio.sleep(0.01)
+    make_sure(True)
+
+@check("Sync check alongside async")
+def sync_check():
+    make_sure(True)
+""")
+
+    try:
+        request = RequestFactory().get("/healthcheck/?format=json")
+        response = healthcheck_view(request, config_path=config_path)
+
+        assert response.status_code == 200
+        data = json.loads(response.content)
+        assert data["status"] == "passed"
+        assert data["stats"]["passed"] == 2
+    finally:
+        os.unlink(config_path)
+
+
 def test_template_discovery():
     """Django's app template loader should find allgreen/healthcheck.html."""
     from django.template.loader import render_to_string
