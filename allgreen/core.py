@@ -14,6 +14,10 @@ from typing import Any
 
 from .rate_limiting import RateLimitConfig, get_rate_tracker
 
+# Upper bound on threads used by run_all(); health checks are I/O-bound so
+# a small pool keeps resource usage predictable even with many checks.
+DEFAULT_MAX_PARALLEL_CHECKS = 8
+
 
 class CheckStatus(Enum):
     PASSED = "passed"
@@ -94,18 +98,22 @@ def execute_with_robust_timeout(func: Callable, timeout_seconds: float) -> Any:
         with timeout_context(timeout_seconds):
             return func()
     else:
-        # Worker thread with hard timeout for robust interruption
-        with ThreadPoolExecutor(
+        # Worker thread with hard timeout for robust interruption.
+        # shutdown(wait=False) so a timed-out check thread is abandoned
+        # instead of blocking us until it finishes.
+        executor = ThreadPoolExecutor(
             max_workers=1, thread_name_prefix="allgreen_timeout"
-        ) as executor:
+        )
+        try:
             future = executor.submit(func)
             try:
                 return future.result(timeout=timeout_seconds)
             except FutureTimeoutError:
-                # The worker thread will be abandoned and eventually cleaned up
                 raise CheckTimeoutError(
                     f"Check timed out after {timeout_seconds:.1f} seconds"
                 ) from None
+        finally:
+            executor.shutdown(wait=False)
 
 
 async def _await_with_timeout(func: Callable, timeout_seconds: float) -> Any:
@@ -162,17 +170,19 @@ async def execute_with_async_timeout(func: Callable, timeout_seconds: float) -> 
 
     loop = asyncio.get_running_loop()
 
-    with ThreadPoolExecutor(
-        max_workers=1, thread_name_prefix="allgreen_async"
-    ) as executor:
-        try:
-            return await asyncio.wait_for(
-                loop.run_in_executor(executor, func), timeout=timeout_seconds
-            )
-        except asyncio.TimeoutError:
-            raise CheckTimeoutError(
-                f"Check timed out after {timeout_seconds:.1f} seconds"
-            ) from None
+    # shutdown(wait=False) so a timed-out check thread is abandoned instead
+    # of blocking the event loop until it finishes.
+    executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="allgreen_async")
+    try:
+        return await asyncio.wait_for(
+            loop.run_in_executor(executor, func), timeout=timeout_seconds
+        )
+    except asyncio.TimeoutError:
+        raise CheckTimeoutError(
+            f"Check timed out after {timeout_seconds:.1f} seconds"
+        ) from None
+    finally:
+        executor.shutdown(wait=False)
 
 
 @contextmanager
@@ -591,28 +601,44 @@ class CheckRegistry:
         self._checks = list(checks)
 
     def run_all(
-        self, environment: str = "development"
+        self, environment: str = "development", max_workers: int | None = None
     ) -> list[tuple[Check, CheckResult]]:
-        results = []
-        for check in self._checks:
-            result = check.execute(environment)
-            results.append((check, result))
-        return results
+        """
+        Run all checks concurrently in a thread pool.
+
+        Endpoint latency is roughly the slowest check rather than the sum of
+        all checks. Results are returned in registration order.
+        """
+        checks = self._checks
+        if len(checks) <= 1:
+            return [(check, check.execute(environment)) for check in checks]
+
+        if max_workers is None:
+            max_workers = min(DEFAULT_MAX_PARALLEL_CHECKS, len(checks))
+
+        with ThreadPoolExecutor(
+            max_workers=max_workers, thread_name_prefix="allgreen_check"
+        ) as executor:
+            results = list(
+                executor.map(lambda check: check.execute(environment), checks)
+            )
+        return list(zip(checks, results, strict=True))
 
     async def run_all_async(
         self, environment: str = "development"
     ) -> list[tuple[Check, CheckResult]]:
         """
-        Run all checks asynchronously without blocking the event loop.
+        Run all checks concurrently without blocking the event loop.
 
-        Essential for ASGI applications like FastAPI. Each check runs in
-        a worker thread with robust timeout enforcement.
+        Essential for ASGI applications like FastAPI. Async checks run
+        natively on the event loop; sync checks run in worker threads.
+        Results are returned in registration order.
         """
-        results = []
-        for check in self._checks:
-            result = await check.execute_async(environment)
-            results.append((check, result))
-        return results
+        checks = self._checks
+        results = await asyncio.gather(
+            *(check.execute_async(environment) for check in checks)
+        )
+        return list(zip(checks, results, strict=True))
 
 
 # Global registry

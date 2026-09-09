@@ -13,6 +13,7 @@ Perfect for monitoring application health, smoke testing, and ensuring your serv
 
 - **Simple DSL** - Define health checks in intuitive, readable Python
 - **Async Support** - Write checks as `async def`, awaited natively in ASGI apps
+- **Parallel Execution** - Checks run concurrently, so latency is the slowest check, not the sum
 - **Beautiful Web Dashboard** - Responsive UI with automatic dark mode
 - **Fast & Lightweight** - Minimal dependencies, maximum performance  
 - **Timeout Protection** - Prevent hanging checks with configurable timeouts
@@ -178,6 +179,16 @@ async def upstream_check():
 - **Flask / Django / core-only**: async checks are executed transparently via a dedicated event loop
 - Timeouts apply to async checks too, via task cancellation
 - Sync and async checks can be freely mixed in one config file
+
+### Parallel Execution
+
+Checks run concurrently: sync checks in a thread pool (up to 8 workers by
+default), async checks via `asyncio.gather` on the event loop. Endpoint
+latency is roughly the duration of the slowest check rather than the sum of
+all checks. Results are always reported in registration order.
+
+- Tune the pool size with `get_registry().run_all(max_workers=...)` if calling directly
+- Checks execute in worker threads, so anything they share must be thread-safe
 
 ### Timeout Protection
 
