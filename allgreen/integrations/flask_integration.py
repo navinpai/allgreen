@@ -19,11 +19,19 @@ class HealthCheckApp:
         config_path: str | None = None,
         environment: str | None = None,
         auto_reload_config: bool = True,
+        show_tracebacks: bool | None = None,
     ):
         self.app_name = app_name
         self.config_path = config_path
         self.environment: str = environment or os.getenv("ENVIRONMENT") or "development"
         self.auto_reload_config = auto_reload_config
+        # Like Django's DEBUG: tracebacks are only exposed in development
+        # unless explicitly enabled
+        self.show_tracebacks: bool = (
+            show_tracebacks
+            if show_tracebacks is not None
+            else self.environment == "development"
+        )
         self._last_config_mtime: float | None = None
 
         # Load initial config
@@ -71,6 +79,7 @@ class HealthCheckApp:
             "environment": self.environment,
             "app_name": self.app_name,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "show_tracebacks": self.show_tracebacks,
         }
 
         return results, metadata
@@ -100,6 +109,7 @@ class HealthCheckApp:
             metadata["overall_status"],
             self.app_name,
             self.environment,
+            include_tracebacks=self.show_tracebacks,
         )
 
         # Determine HTTP status code
@@ -128,12 +138,15 @@ def create_healthcheck_blueprint(
     auto_reload_config: bool = True,
     url_prefix: str | None = None,
     metrics_path: str | None = "/metrics",
+    show_tracebacks: bool | None = None,
 ) -> Blueprint:
     """Create a Blueprint with health check endpoints.
 
     Args:
         metrics_path: Route for the Prometheus metrics endpoint.
             Set to None to disable it.
+        show_tracebacks: Include full tracebacks for errored checks in
+            responses. Defaults to True only in the development environment.
     """
 
     # Create blueprint
@@ -150,6 +163,7 @@ def create_healthcheck_blueprint(
         config_path=config_path,
         environment=environment,
         auto_reload_config=auto_reload_config,
+        show_tracebacks=show_tracebacks,
     )
 
     @blueprint.route("/healthcheck")
@@ -199,6 +213,7 @@ def create_app(
     auto_reload_config: bool = True,
     flask_app: Flask | None = None,
     metrics_path: str | None = "/metrics",
+    show_tracebacks: bool | None = None,
 ) -> Flask:
     """Create and configure a Flask app with health check endpoints."""
 
@@ -217,6 +232,7 @@ def create_app(
         environment=environment,
         auto_reload_config=auto_reload_config,
         metrics_path=metrics_path,
+        show_tracebacks=show_tracebacks,
     )
     flask_app.register_blueprint(blueprint)
 
@@ -231,6 +247,7 @@ def mount_healthcheck(
     auto_reload_config: bool = True,
     url_prefix: str | None = None,
     metrics_path: str | None = "/metrics",
+    show_tracebacks: bool | None = None,
 ) -> Flask:
     """Mount health check routes on an existing Flask app."""
 
@@ -242,6 +259,7 @@ def mount_healthcheck(
         auto_reload_config=auto_reload_config,
         url_prefix=url_prefix,
         metrics_path=metrics_path,
+        show_tracebacks=show_tracebacks,
     )
     app.register_blueprint(blueprint)
 

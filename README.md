@@ -456,6 +456,9 @@ def cache_check():
 - Consider restricting access in production environments
 - Avoid exposing sensitive system information in check descriptions
 - Rate limiting helps prevent abuse of expensive operations
+- Tracebacks from errored checks are hidden unless the environment is
+  `development`; responses only include the exception type and message.
+  Pass `show_tracebacks=True` to the integration to opt in elsewhere
 
 ## Development
 

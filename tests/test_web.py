@@ -297,3 +297,88 @@ def pass_check():
 
     finally:
         os.unlink(config_path)
+
+
+def test_tracebacks_hidden_outside_development():
+    get_registry().clear()
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+        f.write("""
+@check("Erroring check")
+def erroring_check():
+    raise ValueError("secret internals")
+""")
+        config_path = f.name
+
+    try:
+        app = create_app(
+            config_path=config_path, environment="production", auto_reload_config=False
+        )
+        client = app.test_client()
+
+        response = client.get("/healthcheck.json")
+        data = response.get_json()
+        assert data["checks"][0]["error"] == "ValueError: secret internals"
+        assert data["checks"][0]["traceback"] is None
+
+        html = client.get("/healthcheck").get_data(as_text=True)
+        assert "Traceback (most recent call last)" not in html
+
+    finally:
+        os.unlink(config_path)
+
+
+def test_tracebacks_shown_in_development():
+    get_registry().clear()
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+        f.write("""
+@check("Erroring check")
+def erroring_check():
+    raise ValueError("dev details")
+""")
+        config_path = f.name
+
+    try:
+        app = create_app(
+            config_path=config_path,
+            environment="development",
+            auto_reload_config=False,
+        )
+        client = app.test_client()
+
+        data = client.get("/healthcheck.json").get_json()
+        assert "Traceback (most recent call last)" in data["checks"][0]["traceback"]
+
+        html = client.get("/healthcheck").get_data(as_text=True)
+        assert "Traceback (most recent call last)" in html
+
+    finally:
+        os.unlink(config_path)
+
+
+def test_tracebacks_forced_on_in_production():
+    get_registry().clear()
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+        f.write("""
+@check("Erroring check")
+def erroring_check():
+    raise ValueError("opted in")
+""")
+        config_path = f.name
+
+    try:
+        app = create_app(
+            config_path=config_path,
+            environment="production",
+            auto_reload_config=False,
+            show_tracebacks=True,
+        )
+        client = app.test_client()
+
+        data = client.get("/healthcheck.json").get_json()
+        assert "Traceback (most recent call last)" in data["checks"][0]["traceback"]
+
+    finally:
+        os.unlink(config_path)

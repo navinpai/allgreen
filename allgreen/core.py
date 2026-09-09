@@ -29,6 +29,11 @@ class CheckResult:
     error: str | None = None
     duration_ms: float | None = None
     skip_reason: str | None = None
+    traceback: str | None = None
+
+    @property
+    def duration_formatted(self) -> str | None:
+        return f"{self.duration_ms:.1f}" if self.duration_ms is not None else None
 
     @property
     def passed(self) -> bool:
@@ -322,6 +327,7 @@ class Check:
                         error=cached_result.get("error"),
                         duration_ms=cached_result.get("duration_ms", 0),
                         skip_reason=None,  # Not actually skipped, just cached
+                        traceback=cached_result.get("traceback"),
                     )
                 else:
                     return CheckResult(
@@ -372,8 +378,9 @@ class Check:
             result = CheckResult(
                 status=CheckStatus.ERROR,
                 error=f"{type(e).__name__}: {e}",
-                message=traceback.format_exc(),
+                message="Check raised an unexpected exception",
                 duration_ms=duration_ms,
+                traceback=traceback.format_exc(),
             )
             if self.run:
                 self._cache_result(result, environment)
@@ -416,6 +423,7 @@ class Check:
                         error=cached_result.get("error"),
                         duration_ms=cached_result.get("duration_ms", 0),
                         skip_reason=None,  # Not actually skipped, just cached
+                        traceback=cached_result.get("traceback"),
                     )
                 else:
                     return CheckResult(
@@ -466,8 +474,9 @@ class Check:
             result = CheckResult(
                 status=CheckStatus.ERROR,
                 error=f"{type(e).__name__}: {e}",
-                message=traceback.format_exc(),
+                message="Check raised an unexpected exception",
                 duration_ms=duration_ms,
+                traceback=traceback.format_exc(),
             )
             if self.run:
                 self._cache_result(result, environment)
@@ -503,12 +512,13 @@ class Check:
         if not self.run:
             return
 
-        # Convert CheckResult to dict for caching
+        # Convert CheckResult to a JSON-serializable dict for caching
         result_dict = {
-            "status": result.status,
+            "status": result.status.value,
             "message": result.message,
             "error": result.error,
             "duration_ms": result.duration_ms,
+            "traceback": result.traceback,
         }
 
         tracker = get_rate_tracker()

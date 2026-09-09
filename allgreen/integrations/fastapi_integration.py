@@ -47,6 +47,7 @@ def create_router(
     environment: str | None = None,
     prefix: str | None = None,
     metrics_path: str | None = "/metrics",
+    show_tracebacks: bool | None = None,
 ) -> APIRouter:
     """
     Create a FastAPI router with health check endpoints.
@@ -58,6 +59,8 @@ def create_router(
         prefix: URL prefix for routes (use with app.include_router(router, prefix="/..."))
         metrics_path: Route for the Prometheus metrics endpoint.
             Set to None to disable it.
+        show_tracebacks: Include full tracebacks for errored checks in
+            responses. Defaults to True only in the development environment.
 
     Returns:
         APIRouter with /healthcheck, /healthcheck.json, and /metrics endpoints
@@ -72,7 +75,9 @@ def create_router(
     @router.get("/healthcheck", response_class=HTMLResponse)
     @router.get("/healthcheck.json", response_class=JSONResponse)
     async def healthcheck_endpoint(request: Request):
-        return await _healthcheck_handler(request, app_name, config_path, environment)
+        return await _healthcheck_handler(
+            request, app_name, config_path, environment, show_tracebacks
+        )
 
     if metrics_path:
 
@@ -108,6 +113,7 @@ async def healthcheck_endpoint(
     app_name: str = "FastAPI Application",
     config_path: str | None = None,
     environment: str | None = None,
+    show_tracebacks: bool | None = None,
 ):
     """
     Standalone FastAPI health check endpoint.
@@ -117,7 +123,9 @@ async def healthcheck_endpoint(
         async def health(request: Request):
             return await healthcheck_endpoint(request)
     """
-    return await _healthcheck_handler(request, app_name, config_path, environment)
+    return await _healthcheck_handler(
+        request, app_name, config_path, environment, show_tracebacks
+    )
 
 
 async def _healthcheck_handler(
@@ -125,11 +133,14 @@ async def _healthcheck_handler(
     app_name: str,
     config_path: str | None,
     environment: str | None,
+    show_tracebacks: bool | None = None,
 ):
     """Internal handler for health check logic."""
 
     if environment is None:
         environment = "development"
+    if show_tracebacks is None:
+        show_tracebacks = environment == "development"
 
     # Load configuration in a thread pool (file I/O) to avoid blocking the
     # event loop, then run checks natively async: coroutine checks are awaited
@@ -162,7 +173,12 @@ async def _healthcheck_handler(
     if wants_json:
         # Return JSON response
         response_data = format_json_response(
-            results, stats, overall_status, app_name, environment
+            results,
+            stats,
+            overall_status,
+            app_name,
+            environment,
+            include_tracebacks=show_tracebacks,
         )
         return JSONResponse(
             content=response_data, status_code=status_code, headers=headers
@@ -176,6 +192,7 @@ async def _healthcheck_handler(
             "app_name": app_name,
             "environment": environment,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "show_tracebacks": show_tracebacks,
         }
 
         html_content = _render_html_template(context)

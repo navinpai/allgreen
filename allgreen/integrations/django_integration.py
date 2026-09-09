@@ -59,6 +59,7 @@ class HealthCheckView(View):
     app_name = "Django Application"
     config_path = None
     environment = None
+    show_tracebacks: bool | None = None
 
     @method_decorator(never_cache)
     def dispatch(self, request, *args, **kwargs):
@@ -70,6 +71,7 @@ class HealthCheckView(View):
             app_name=self.app_name,
             config_path=self.config_path,
             environment=self.environment,
+            show_tracebacks=self.show_tracebacks,
         )
 
 
@@ -79,6 +81,7 @@ def healthcheck_view(
     app_name: str = "Django Application",
     config_path: str | None = None,
     environment: str | None = None,
+    show_tracebacks: bool | None = None,
 ) -> HttpResponse:
     """
     Django function-based view for health checks.
@@ -91,11 +94,15 @@ def healthcheck_view(
         app_name: Application name to display
         config_path: Path to allgreen_config.py config file
         environment: Environment name (defaults to 'development')
+        show_tracebacks: Include full tracebacks for errored checks in
+            responses. Defaults to True only in the development environment.
     """
 
     # Load configuration and run checks
     if environment is None:
         environment = "development"
+    if show_tracebacks is None:
+        show_tracebacks = environment == "development"
 
     load_config(config_path, environment)
     registry = get_registry()
@@ -117,34 +124,26 @@ def healthcheck_view(
     if wants_json:
         # Return JSON response
         response = JsonResponse(
-            format_json_response(results, stats, overall_status, app_name, environment),
+            format_json_response(
+                results,
+                stats,
+                overall_status,
+                app_name,
+                environment,
+                include_tracebacks=show_tracebacks,
+            ),
             status=status_code,
         )
     else:
         # Return HTML response
-        # Add formatted duration for template compatibility
-        formatted_results = []
-        for check, result in results:
-            # Create a copy of result with formatted duration
-            result_dict = {
-                "status": result.status,
-                "message": result.message,
-                "error": result.error,
-                "duration_ms": result.duration_ms,
-                "duration_formatted": f"{result.duration_ms:.1f}"
-                if result.duration_ms is not None
-                else None,
-                "skip_reason": result.skip_reason,
-            }
-            formatted_results.append((check, type("Result", (), result_dict)()))
-
         context = {
-            "results": formatted_results,
+            "results": results,
             "stats": stats,
             "overall_status": overall_status,
             "app_name": app_name,
             "environment": environment,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "show_tracebacks": show_tracebacks,
         }
 
         html_content = _render_html_template(context)

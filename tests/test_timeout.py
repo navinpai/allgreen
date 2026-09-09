@@ -124,7 +124,8 @@ class TestTimeoutFunctionality:
 
         assert result.status == CheckStatus.ERROR
         assert "ValueError: Something went wrong" in result.error
-        assert "Something went wrong" in result.message  # Should have traceback
+        assert result.message == "Check raised an unexpected exception"
+        assert "Something went wrong" in result.traceback
 
     @pytest.mark.skipif(
         not hasattr(time, "sleep"), reason="Platform doesn't support sleep"

@@ -263,3 +263,41 @@ def skip_check():
         assert data["status"] == "failed"
     finally:
         os.unlink(config_path)
+
+
+def test_tracebacks_hidden_outside_development():
+    get_registry().clear()
+    config_path = _write_config("""
+@check("Erroring check")
+def erroring_check():
+    raise ValueError("secret internals")
+""")
+
+    try:
+        client = _make_client(config_path, environment="production")
+        data = client.get("/healthcheck.json").json()
+
+        assert data["checks"][0]["error"] == "ValueError: secret internals"
+        assert data["checks"][0]["traceback"] is None
+
+        html = client.get("/healthcheck").text
+        assert "Traceback (most recent call last)" not in html
+    finally:
+        os.unlink(config_path)
+
+
+def test_tracebacks_shown_in_development():
+    get_registry().clear()
+    config_path = _write_config("""
+@check("Erroring check")
+def erroring_check():
+    raise ValueError("dev details")
+""")
+
+    try:
+        client = _make_client(config_path, environment="development")
+        data = client.get("/healthcheck.json").json()
+
+        assert "Traceback (most recent call last)" in data["checks"][0]["traceback"]
+    finally:
+        os.unlink(config_path)

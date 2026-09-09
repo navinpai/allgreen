@@ -243,3 +243,50 @@ def test_template_discovery():
 
     html = render_to_string("allgreen/healthcheck.html", context)
     assert "<!DOCTYPE html>" in html
+
+
+def test_tracebacks_hidden_outside_development():
+    get_registry().clear()
+    config_path = _write_config("""
+@check("Erroring check")
+def erroring_check():
+    raise ValueError("secret internals")
+""")
+
+    try:
+        request = RequestFactory().get("/healthcheck/?format=json")
+        response = healthcheck_view(
+            request, config_path=config_path, environment="production"
+        )
+
+        data = json.loads(response.content)
+        assert data["checks"][0]["error"] == "ValueError: secret internals"
+        assert data["checks"][0]["traceback"] is None
+
+        html_request = RequestFactory().get("/healthcheck/")
+        html_response = healthcheck_view(
+            html_request, config_path=config_path, environment="production"
+        )
+        assert "Traceback (most recent call last)" not in html_response.content.decode()
+    finally:
+        os.unlink(config_path)
+
+
+def test_tracebacks_shown_in_development():
+    get_registry().clear()
+    config_path = _write_config("""
+@check("Erroring check")
+def erroring_check():
+    raise ValueError("dev details")
+""")
+
+    try:
+        request = RequestFactory().get("/healthcheck/?format=json")
+        response = healthcheck_view(
+            request, config_path=config_path, environment="development"
+        )
+
+        data = json.loads(response.content)
+        assert "Traceback (most recent call last)" in data["checks"][0]["traceback"]
+    finally:
+        os.unlink(config_path)

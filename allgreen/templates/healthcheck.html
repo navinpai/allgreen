@@ -313,6 +313,10 @@
                 {% if result.error %}
                     <div class="check-error">{{ result.error }}</div>
                 {% endif %}
+
+                {% if show_tracebacks and result.traceback %}
+                    <div class="check-error">{{ result.traceback }}</div>
+                {% endif %}
             </div>
             {% endfor %}
         </div>

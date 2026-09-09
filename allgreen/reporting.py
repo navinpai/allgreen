@@ -53,8 +53,13 @@ def format_json_response(
     overall_status: str,
     app_name: str,
     environment: str | None,
+    include_tracebacks: bool = False,
 ) -> dict[str, Any]:
-    """Format results for JSON response."""
+    """Format results for JSON response.
+
+    Tracebacks are omitted unless explicitly requested, so unexpected
+    exceptions don't leak internals on a public endpoint.
+    """
     json_results = []
     for check, result in results:
         json_results.append(
@@ -65,6 +70,7 @@ def format_json_response(
                 "error": result.error,
                 "duration_ms": result.duration_ms,
                 "skip_reason": result.skip_reason,
+                "traceback": result.traceback if include_tracebacks else None,
             }
         )
 
