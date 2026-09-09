@@ -10,6 +10,7 @@ Perfect for monitoring application health, smoke testing, and ensuring your serv
 ## Features
 
 - **Simple DSL** - Define health checks in intuitive, readable Python
+- **Async Support** - Write checks as `async def`, awaited natively in ASGI apps
 - **Beautiful Web Dashboard** - Responsive UI with automatic dark mode
 - **Fast & Lightweight** - Minimal dependencies, maximum performance  
 - **Timeout Protection** - Prevent hanging checks with configurable timeouts
@@ -144,6 +145,27 @@ def math_check():
 ```
 
 ## Advanced Features
+
+### Async Checks
+
+Checks can be defined with `async def` — they work in every supported framework:
+
+```python
+import asyncio
+import httpx
+
+
+@check("Upstream API is healthy", timeout=5)
+async def upstream_check():
+    async with httpx.AsyncClient() as client:
+        response = await client.get("https://api.example.com/health")
+    expect(response.status_code).to_eq(200)
+```
+
+- **FastAPI / ASGI**: async checks run natively on the event loop (no thread hop); sync checks run in a worker thread pool so they never block the loop
+- **Flask / Django / core-only**: async checks are executed transparently via a dedicated event loop
+- Timeouts apply to async checks too, via task cancellation
+- Sync and async checks can be freely mixed in one config file
 
 ### Timeout Protection
 
