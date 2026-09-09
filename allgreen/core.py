@@ -1,3 +1,5 @@
+import asyncio
+import inspect
 import signal
 import threading
 import time
@@ -9,6 +11,8 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
+
+from .rate_limiting import RateLimitConfig, get_rate_tracker
 
 
 class CheckStatus(Enum):
@@ -72,6 +76,9 @@ def execute_with_robust_timeout(func: Callable, timeout_seconds: float) -> Any:
         CheckTimeoutError: If execution exceeds timeout
         Any exception raised by func()
     """
+    if inspect.iscoroutinefunction(func):
+        return _execute_coroutine_sync(func, timeout_seconds)
+
     if timeout_seconds <= 0:
         return func()
 
@@ -96,14 +103,52 @@ def execute_with_robust_timeout(func: Callable, timeout_seconds: float) -> Any:
                 ) from None
 
 
+async def _await_with_timeout(func: Callable, timeout_seconds: float) -> Any:
+    """Await a coroutine function with timeout enforcement via cancellation."""
+    if timeout_seconds <= 0:
+        return await func()
+
+    try:
+        return await asyncio.wait_for(func(), timeout=timeout_seconds)
+    except (TimeoutError, asyncio.TimeoutError):
+        raise CheckTimeoutError(
+            f"Check timed out after {timeout_seconds:.1f} seconds"
+        ) from None
+
+
+def _execute_coroutine_sync(func: Callable, timeout_seconds: float) -> Any:
+    """
+    Run an async check function from a synchronous context (Flask, Django,
+    core-only usage).
+    """
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        # No event loop in this thread - the common sync case
+        return asyncio.run(_await_with_timeout(func, timeout_seconds))
+
+    # A loop is already running in this thread (sync execute() called from
+    # async code); asyncio.run() would fail, so run on a fresh loop in a
+    # worker thread.
+    with ThreadPoolExecutor(
+        max_workers=1, thread_name_prefix="allgreen_async_bridge"
+    ) as executor:
+        future = executor.submit(
+            asyncio.run, _await_with_timeout(func, timeout_seconds)
+        )
+        return future.result()
+
+
 async def execute_with_async_timeout(func: Callable, timeout_seconds: float) -> Any:
     """
     Execute function with timeout in async context (for ASGI apps like FastAPI).
 
-    Runs the sync function in a thread pool to avoid blocking the event loop,
-    with hard timeout enforcement.
+    Async check functions are awaited natively on the event loop. Sync check
+    functions run in a thread pool to avoid blocking the event loop. Both get
+    hard timeout enforcement.
     """
-    import asyncio
+    if inspect.iscoroutinefunction(func):
+        return await _await_with_timeout(func, timeout_seconds)
 
     if timeout_seconds <= 0:
         # Even without timeout, run in executor to avoid blocking event loop
@@ -197,7 +242,7 @@ class Check:
     def __init__(
         self,
         description: str,
-        func: Callable[[], None],
+        func: Callable[[], Any],
         timeout: int | None = None,
         only_in: str | list[str] | None = None,
         except_in: str | list[str] | None = None,
@@ -433,9 +478,6 @@ class Check:
         if not self.run:
             return True, None, None
 
-        # Import locally to avoid circular imports
-        from .rate_limiting import RateLimitConfig, get_rate_tracker
-
         try:
             config = RateLimitConfig(self.run)
             tracker = get_rate_tracker()
@@ -458,8 +500,6 @@ class Check:
         """Cache the result of a rate-limited check."""
         if not self.run:
             return
-
-        from .rate_limiting import get_rate_tracker
 
         # Convert CheckResult to dict for caching
         result_dict = {
@@ -529,7 +569,7 @@ def check(
     if_condition: bool | Callable[[], bool] | None = None,
     run: str | None = None,
 ):
-    def decorator(func: Callable[[], None]) -> Callable[[], None]:
+    def decorator(func: Callable[[], Any]) -> Callable[[], Any]:
         check_obj = Check(
             description=description,
             func=func,

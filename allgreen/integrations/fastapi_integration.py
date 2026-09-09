@@ -97,16 +97,15 @@ async def _healthcheck_handler(
 ):
     """Internal handler for health check logic."""
 
-    # Load configuration and run checks in thread pool to avoid blocking event loop
     if environment is None:
         environment = "development"
 
-    def run_checks():
-        load_config(config_path, environment)
-        registry = get_registry()
-        return registry.run_all(environment)
-
-    results = await anyio.to_thread.run_sync(run_checks)
+    # Load configuration in a thread pool (file I/O) to avoid blocking the
+    # event loop, then run checks natively async: coroutine checks are awaited
+    # on the event loop, sync checks run in worker threads.
+    await anyio.to_thread.run_sync(load_config, config_path, environment)
+    registry = get_registry()
+    results = await registry.run_all_async(environment)
 
     # Calculate statistics and overall status
     stats = _calculate_stats(results)
