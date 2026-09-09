@@ -1,6 +1,8 @@
 # ✅ Allgreen - Python Health Checks Made Simple
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![PyPI](https://img.shields.io/pypi/v/allgreen)](https://pypi.org/project/allgreen/)
+[![Python versions](https://img.shields.io/pypi/pyversions/allgreen)](https://pypi.org/project/allgreen/)
+[![CI](https://github.com/navinpai/allgreen/actions/workflows/ci.yml/badge.svg)](https://github.com/navinpai/allgreen/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Add quick, simple, and beautiful health checks to your Python application via a `/healthcheck` endpoint.
@@ -227,8 +229,8 @@ def feature_check():
 Visit `/healthcheck` for a beautiful, responsive dashboard featuring:
 - Color-coded check results (pass/fail/skip)
 - Automatic dark mode based on system preferences
-- ⏱️ Execution timing for each check
-- 📊 Summary statistics
+- Execution timing for each check
+- Summary statistics
 - Mobile-responsive design
 
 ### JSON API
