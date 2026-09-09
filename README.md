@@ -1,6 +1,6 @@
 # ✅ Allgreen - Python Health Checks Made Simple
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Add quick, simple, and beautiful health checks to your Python application via a `/healthcheck` endpoint.
@@ -50,17 +50,20 @@ Create an `allgreen_config.py` file in your project root:
 ```python
 # allgreen_config.py
 
+
 @check("Database connection is healthy")
 def database_check():
     # Your database connection logic
     make_sure(db.is_connected(), "Database should be accessible")
+
 
 @check("API response time is acceptable")
 def api_performance_check():
     response_time = api.ping()
     expect(response_time).to_be_less_than(200)  # milliseconds
 
-@check("Disk space is sufficient") 
+
+@check("Disk space is sufficient")
 def disk_space_check():
     usage_percent = get_disk_usage()
     expect(usage_percent).to_be_less_than(90)
@@ -99,7 +102,7 @@ from django.urls import path
 from allgreen.integrations.django_integration import healthcheck_view
 
 urlpatterns = [
-    path('healthcheck/', healthcheck_view, name='healthcheck'),
+    path("healthcheck/", healthcheck_view, name="healthcheck"),
 ]
 ```
 
@@ -161,6 +164,7 @@ def expensive_check():
     result = paid_api.run_diagnostics()
     expect(result.status).to_eq("healthy")
 
+
 @check("Daily backup verification", run="1 time per day")
 def daily_backup_check():
     # Perfect for expensive operations that should only run occasionally
@@ -181,10 +185,12 @@ def prod_db_check():
     # Only runs in production environment
     expect(db.query_time()).to_be_less_than(10)
 
+
 @check("Development tools available", except_in=["production", "staging"])
 def dev_tools_check():
     # Skipped in production and staging
     make_sure(debug_tools.available())
+
 
 @check("Conditional feature check", if_condition=lambda: feature_flag.enabled())
 def feature_check():
@@ -246,13 +252,13 @@ app = Flask(__name__)
 
 # Mount health checks
 mount_healthcheck(
-    app, 
+    app,
     app_name="My Flask API",
     config_path="config/allgreen_config.py",
-    environment="production"
+    environment="production",
 )
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run()
 ```
 
@@ -263,7 +269,7 @@ from django.urls import path
 from allgreen.integrations.django_integration import healthcheck_view
 
 urlpatterns = [
-    path('healthcheck/', healthcheck_view, name='healthcheck'),
+    path("healthcheck/", healthcheck_view, name="healthcheck"),
 ]
 
 # For custom configuration
@@ -272,11 +278,11 @@ from allgreen.integrations.django_integration import create_healthcheck_view
 custom_view = create_healthcheck_view(
     app_name="My Django App",
     config_path="myapp/health_checks.py",
-    environment="production"
+    environment="production",
 )
 
 urlpatterns = [
-    path('health/', custom_view, name='healthcheck'),
+    path("health/", custom_view, name="healthcheck"),
 ]
 ```
 
@@ -288,14 +294,12 @@ from allgreen.integrations.fastapi_integration import create_router
 app = FastAPI()
 
 # Method 1: Mount router
-health_router = create_router(
-    app_name="My FastAPI",
-    config_path="config/allgood.py"
-)
+health_router = create_router(app_name="My FastAPI", config_path="config/allgood.py")
 app.include_router(health_router)
 
 # Method 2: Individual endpoint
 from allgreen.integrations.fastapi_integration import healthcheck_endpoint
+
 
 @app.get("/healthcheck")
 async def health(request: Request):
@@ -333,19 +337,21 @@ Allgreen automatically looks for configuration files in these locations:
 @check("Database queries are fast")
 def db_performance():
     start = time.time()
-    users = User.objects.all()[:10] 
+    users = User.objects.all()[:10]
     duration = (time.time() - start) * 1000
     expect(duration).to_be_less_than(100)  # under 100ms
 
-@check("External API is responsive")  
+
+@check("External API is responsive")
 def api_health():
     response = requests.get("https://api.example.com/health", timeout=5)
     expect(response.status_code).to_eq(200)
-    
+
+
 @check("Cache is working", run="5 times per hour")
 def cache_check():
-    cache.set('test_key', 'test_value')
-    expect(cache.get('test_key')).to_eq('test_value')
+    cache.set("test_key", "test_value")
+    expect(cache.get("test_key")).to_eq("test_value")
 ```
 
 ### What to Avoid
@@ -374,8 +380,12 @@ uv pip install -e ".[dev]"
 # Run tests
 python -m pytest
 
-# Run linting  
+# Run linting and formatting checks
 ruff check .
+ruff format --check .
+
+# Run type checking
+mypy
 
 # Start example server
 python test_server.py
@@ -388,7 +398,7 @@ python test_server.py
 3. Make your changes
 4. Add tests for new functionality
 5. Ensure all tests pass (`python -m pytest`)
-6. Run linting (`ruff check .`)
+6. Run linting, formatting, and type checks (`ruff check . && ruff format --check . && mypy`)
 7. Commit your changes (`git commit -m 'Add amazing feature'`)
 8. Push to the branch (`git push origin feature/amazing-feature`)
 9. Open a Pull Request
