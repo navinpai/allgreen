@@ -18,6 +18,7 @@ Perfect for monitoring application health, smoke testing, and ensuring your serv
 - **Environment Conditions** - Run checks only in specific environments
 - **Result Caching** - Cache expensive operations between rate-limited runs
 - **Multiple Output Formats** - HTML dashboard, JSON API, or both
+- **Prometheus Metrics** - Built-in `/metrics` endpoint, no extra dependencies
 - **Framework Agnostic** - Works with Flask, Django, FastAPI, or standalone
 
 ## Installation
@@ -262,6 +263,65 @@ Perfect for integration with monitoring tools like:
 - Pingdom  
 - Datadog
 - Custom monitoring solutions
+
+### Prometheus Metrics
+
+Flask and FastAPI integrations expose a `/metrics` endpoint out of the box (no
+`prometheus_client` dependency needed). It renders the standard text exposition
+format:
+
+```text
+# HELP allgreen_up Overall health status (1 = all checks passing)
+# TYPE allgreen_up gauge
+allgreen_up 1
+# HELP allgreen_checks Number of health checks by status
+# TYPE allgreen_checks gauge
+allgreen_checks{status="passed"} 3
+allgreen_checks{status="failed"} 0
+allgreen_checks{status="skipped"} 1
+allgreen_checks{status="error"} 0
+# HELP allgreen_check_status Health check result (1 = passed, 0 = failed)
+# TYPE allgreen_check_status gauge
+allgreen_check_status{check="Database connection"} 1
+# HELP allgreen_check_duration_seconds Health check execution time
+# TYPE allgreen_check_duration_seconds gauge
+allgreen_check_duration_seconds{check="Database connection"} 0.023400
+```
+
+The endpoint always returns **200** - overall health is conveyed via the
+`allgreen_up` metric so Prometheus can keep scraping even when checks fail.
+
+Customize or disable the route with `metrics_path`:
+
+```python
+# Flask
+mount_healthcheck(app, metrics_path="/prometheus")  # custom path
+mount_healthcheck(app, metrics_path=None)  # disabled
+
+# FastAPI
+create_router(metrics_path="/prometheus")
+```
+
+For Django, wire up the view in `urls.py`:
+
+```python
+from allgreen.integrations.django_integration import metrics_view
+
+urlpatterns = [
+    path("metrics/", metrics_view, name="metrics"),
+]
+```
+
+Sample Prometheus scrape config:
+
+```yaml
+scrape_configs:
+  - job_name: myapp-health
+    metrics_path: /metrics
+    scrape_interval: 60s
+    static_configs:
+      - targets: ["myapp.example.com"]
+```
 
 ## Framework Integration
 
