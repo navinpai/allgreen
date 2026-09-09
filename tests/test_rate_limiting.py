@@ -1,3 +1,4 @@
+import json
 import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -192,3 +193,44 @@ class TestRateLimitTracker:
             # Should handle corruption gracefully
             should_run, _, _ = tracker.should_run_check(check_id, config)
             assert should_run is True  # Should start fresh
+
+
+class TestJsonPersistence:
+    def test_state_files_are_json(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tracker = RateLimitTracker(Path(tmpdir))
+            config = RateLimitConfig("2 times per hour")
+
+            tracker.should_run_check("json check", config)
+            tracker.record_result("json check", {"status": "passed", "message": "ok"})
+
+            files = list(Path(tmpdir).iterdir())
+            assert len(files) == 1
+            assert files[0].suffix == ".json"
+
+            state = json.loads(files[0].read_text())
+            assert state["count"] == 1
+            # period_start is stored as an ISO string
+            datetime.fromisoformat(state["period_start"])
+            assert state["last_result"]["status"] == "passed"
+
+    def test_cache_dir_not_created_at_init(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_dir = Path(tmpdir) / "does_not_exist_yet"
+            RateLimitTracker(cache_dir)
+            assert not cache_dir.exists()
+
+    def test_unwritable_cache_dir_does_not_crash(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            read_only = Path(tmpdir) / "read_only"
+            read_only.mkdir()
+            read_only.chmod(0o500)
+            try:
+                tracker = RateLimitTracker(read_only / "rate_limits")
+                config = RateLimitConfig("2 times per hour")
+
+                # Runs fine, just without persistence
+                should_run, _, _ = tracker.should_run_check("ro check", config)
+                assert should_run
+            finally:
+                read_only.chmod(0o700)

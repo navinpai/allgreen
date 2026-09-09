@@ -7,11 +7,14 @@ Supports patterns like:
 - "1 time per minute"
 """
 
-import pickle
+import json
+import logging
 import re
 import threading
 from datetime import datetime, timedelta
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_CACHE_DIR = Path.home() / ".allgreen" / "rate_limits"
 
@@ -72,37 +75,55 @@ class RateLimitTracker:
 
     def __init__(self, cache_dir: Path | None = None):
         self.cache_dir = cache_dir or DEFAULT_CACHE_DIR
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()
 
     def _get_cache_file(self, check_id: str) -> Path:
         """Get the cache file path for a specific check."""
         # Use check description as ID, but sanitize for filesystem
         safe_id = re.sub(r"[^\w\-_.]", "_", check_id)
-        return self.cache_dir / f"{safe_id}.pkl"
+        return self.cache_dir / f"{safe_id}.json"
 
     def _load_state(self, check_id: str) -> dict:
         """Load the rate limit state from disk."""
-        cache_file = self._get_cache_file(check_id)
-        if not cache_file.exists():
-            return {"count": 0, "period_start": None, "last_result": None}
+        fresh_state = {"count": 0, "period_start": None, "last_result": None}
 
+        cache_file = self._get_cache_file(check_id)
         try:
-            with open(cache_file, "rb") as f:
-                return pickle.load(f)
-        except (OSError, pickle.PickleError):
+            with open(cache_file) as f:
+                state = json.load(f)
+        except FileNotFoundError:
+            return fresh_state
+        except (OSError, ValueError):
             # If cache is corrupted, start fresh
-            return {"count": 0, "period_start": None, "last_result": None}
+            logger.warning("Discarding corrupted rate limit state for %s", check_id)
+            return fresh_state
+
+        if state.get("period_start"):
+            try:
+                state["period_start"] = datetime.fromisoformat(state["period_start"])
+            except (TypeError, ValueError):
+                return fresh_state
+
+        return state
 
     def _save_state(self, check_id: str, state: dict) -> None:
-        """Save the rate limit state to disk."""
+        """Save the rate limit state to disk.
+
+        The cache directory is created lazily here (not at import time) so
+        the library works on read-only filesystems - persistence is skipped.
+        """
+        serializable = dict(state)
+        if isinstance(serializable.get("period_start"), datetime):
+            serializable["period_start"] = serializable["period_start"].isoformat()
+
         cache_file = self._get_cache_file(check_id)
         try:
-            with open(cache_file, "wb") as f:
-                pickle.dump(state, f)
-        except OSError:
+            self.cache_dir.mkdir(parents=True, exist_ok=True)
+            with open(cache_file, "w") as f:
+                json.dump(serializable, f)
+        except (OSError, TypeError) as e:
             # If we can't save to cache, continue without persistence
-            pass
+            logger.warning("Could not persist rate limit state for %s: %s", check_id, e)
 
     def should_run_check(
         self, check_id: str, config: RateLimitConfig, now: datetime | None = None
