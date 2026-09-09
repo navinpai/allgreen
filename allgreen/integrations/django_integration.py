@@ -17,6 +17,7 @@ Usage:
 
     urlpatterns = [
         path('healthcheck/', django_integration.healthcheck_view, name='healthcheck'),
+        path('metrics/', django_integration.metrics_view, name='metrics'),
     ]
 
     # Or use as class-based view
@@ -40,7 +41,9 @@ except ImportError:
     ) from None
 
 from ..config import load_config
-from ..core import CheckStatus, get_registry
+from ..core import get_registry
+from ..metrics import PROMETHEUS_CONTENT_TYPE, render_prometheus_metrics
+from ..reporting import calculate_stats, format_json_response, get_overall_status
 
 
 class HealthCheckView(View):
@@ -99,8 +102,8 @@ def healthcheck_view(
     results = registry.run_all(environment)
 
     # Calculate statistics and overall status
-    stats = _calculate_stats(results)
-    overall_status = _get_overall_status(stats)
+    stats = calculate_stats(results)
+    overall_status = get_overall_status(stats)
 
     # Determine response format
     wants_json = (
@@ -114,9 +117,7 @@ def healthcheck_view(
     if wants_json:
         # Return JSON response
         response = JsonResponse(
-            _format_json_response(
-                results, stats, overall_status, app_name, environment
-            ),
+            format_json_response(results, stats, overall_status, app_name, environment),
             status=status_code,
         )
     else:
@@ -156,63 +157,6 @@ def healthcheck_view(
     return response
 
 
-def _calculate_stats(results):
-    """Calculate statistics from check results."""
-    stats = {"total": len(results), "passed": 0, "failed": 0, "skipped": 0, "error": 0}
-
-    for _, result in results:
-        if result.status == CheckStatus.PASSED:
-            stats["passed"] += 1
-        elif result.status == CheckStatus.FAILED:
-            stats["failed"] += 1
-        elif result.status == CheckStatus.SKIPPED:
-            stats["skipped"] += 1
-        elif result.status == CheckStatus.ERROR:
-            stats["error"] += 1
-
-    # Combine failed and error for simpler display
-    stats["failed"] += stats["error"]
-
-    return stats
-
-
-def _get_overall_status(stats):
-    """Determine overall health status."""
-    if stats["failed"] > 0:
-        return "failed"
-    elif stats["total"] == stats["skipped"]:
-        return "no_checks"
-    elif stats["passed"] > 0:
-        return "passed"
-    else:
-        return "unknown"
-
-
-def _format_json_response(results, stats, overall_status, app_name, environment):
-    """Format results for JSON response."""
-    json_results = []
-    for check, result in results:
-        json_results.append(
-            {
-                "description": check.description,
-                "status": result.status.value,
-                "message": result.message,
-                "error": result.error,
-                "duration_ms": result.duration_ms,
-                "skip_reason": result.skip_reason,
-            }
-        )
-
-    return {
-        "status": overall_status,
-        "stats": stats,
-        "environment": environment,
-        "app_name": app_name,
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "checks": json_results,
-    }
-
-
 def _render_html_template(context):
     """
     Render HTML template using Django's template system.
@@ -220,3 +164,32 @@ def _render_html_template(context):
     Uses the shared template at allgreen/healthcheck.html.
     """
     return render_to_string("allgreen/healthcheck.html", context)
+
+
+@never_cache
+def metrics_view(
+    request: HttpRequest,
+    config_path: str | None = None,
+    environment: str | None = None,
+) -> HttpResponse:
+    """
+    Django view exposing check results as Prometheus metrics.
+
+    Always returns 200 - health is conveyed via the allgreen_up metric.
+
+    Usage:
+        urlpatterns = [
+            path('metrics/', django_integration.metrics_view, name='metrics'),
+        ]
+    """
+    if environment is None:
+        environment = "development"
+
+    load_config(config_path, environment)
+    results = get_registry().run_all(environment)
+
+    response = HttpResponse(
+        render_prometheus_metrics(results), content_type=PROMETHEUS_CONTENT_TYPE
+    )
+    response["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    return response

@@ -27,6 +27,7 @@ from allgreen import get_registry  # noqa: E402
 from allgreen.integrations.django_integration import (  # noqa: E402
     HealthCheckView,
     healthcheck_view,
+    metrics_view,
 )
 
 
@@ -195,6 +196,34 @@ def sync_check():
         data = json.loads(response.content)
         assert data["status"] == "passed"
         assert data["stats"]["passed"] == 2
+    finally:
+        os.unlink(config_path)
+
+
+def test_metrics_view():
+    get_registry().clear()
+    config_path = _write_config("""
+@check("Metrics passing check")
+def pass_check():
+    make_sure(True)
+
+@check("Metrics failing check")
+def fail_check():
+    make_sure(False)
+""")
+
+    try:
+        request = RequestFactory().get("/metrics/")
+        response = metrics_view(request, config_path=config_path)
+
+        assert response.status_code == 200
+        assert response["Content-Type"].startswith("text/plain")
+        assert "no-store" in response["Cache-Control"]
+
+        text = response.content.decode()
+        assert "allgreen_up 0" in text
+        assert 'allgreen_check_status{check="Metrics passing check"} 1' in text
+        assert 'allgreen_check_status{check="Metrics failing check"} 0' in text
     finally:
         os.unlink(config_path)
 

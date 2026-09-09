@@ -176,6 +176,65 @@ async def failing_async_check():
         os.unlink(config_path)
 
 
+def test_metrics_endpoint():
+    get_registry().clear()
+    config_path = _write_config("""
+@check("Metrics passing check")
+def pass_check():
+    make_sure(True)
+
+@check("Metrics failing check")
+def fail_check():
+    make_sure(False)
+""")
+
+    try:
+        client = _make_client(config_path)
+        response = client.get("/metrics")
+
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("text/plain")
+        assert "allgreen_up 0" in response.text
+        assert 'allgreen_check_status{check="Metrics passing check"} 1' in response.text
+        assert 'allgreen_check_status{check="Metrics failing check"} 0' in response.text
+    finally:
+        os.unlink(config_path)
+
+
+def test_metrics_custom_path():
+    get_registry().clear()
+    config_path = _write_config("""
+@check("Custom path check")
+def pass_check():
+    make_sure(True)
+""")
+
+    try:
+        client = _make_client(config_path, metrics_path="/prometheus")
+
+        assert client.get("/metrics").status_code == 404
+        response = client.get("/prometheus")
+        assert response.status_code == 200
+        assert "allgreen_up 1" in response.text
+    finally:
+        os.unlink(config_path)
+
+
+def test_metrics_disabled():
+    get_registry().clear()
+    config_path = _write_config("""
+@check("No metrics check")
+def pass_check():
+    make_sure(True)
+""")
+
+    try:
+        client = _make_client(config_path, metrics_path=None)
+        assert client.get("/metrics").status_code == 404
+    finally:
+        os.unlink(config_path)
+
+
 def test_statistics():
     get_registry().clear()
     config_path = _write_config("""

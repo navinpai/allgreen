@@ -25,7 +25,7 @@ from datetime import datetime
 try:
     import anyio
     from fastapi import APIRouter, Request
-    from fastapi.responses import HTMLResponse, JSONResponse
+    from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
     from jinja2 import Environment, FileSystemLoader
 except ImportError:
     raise ImportError(
@@ -36,7 +36,9 @@ except ImportError:
 import allgreen
 
 from ..config import load_config
-from ..core import CheckStatus, get_registry
+from ..core import get_registry
+from ..metrics import PROMETHEUS_CONTENT_TYPE, render_prometheus_metrics
+from ..reporting import calculate_stats, format_json_response, get_overall_status
 
 
 def create_router(
@@ -44,6 +46,7 @@ def create_router(
     config_path: str | None = None,
     environment: str | None = None,
     prefix: str | None = None,
+    metrics_path: str | None = "/metrics",
 ) -> APIRouter:
     """
     Create a FastAPI router with health check endpoints.
@@ -53,9 +56,11 @@ def create_router(
         config_path: Path to allgreen_config.py config file
         environment: Environment name
         prefix: URL prefix for routes (use with app.include_router(router, prefix="/..."))
+        metrics_path: Route for the Prometheus metrics endpoint.
+            Set to None to disable it.
 
     Returns:
-        APIRouter with /healthcheck and /healthcheck.json endpoints
+        APIRouter with /healthcheck, /healthcheck.json, and /metrics endpoints
 
     Usage:
         router = create_router(app_name="My App")
@@ -69,7 +74,33 @@ def create_router(
     async def healthcheck_endpoint(request: Request):
         return await _healthcheck_handler(request, app_name, config_path, environment)
 
+    if metrics_path:
+
+        @router.get(metrics_path, response_class=PlainTextResponse)
+        async def metrics_endpoint():
+            return await _metrics_handler(config_path, environment)
+
     return router
+
+
+async def _metrics_handler(
+    config_path: str | None, environment: str | None
+) -> PlainTextResponse:
+    """Run checks and render Prometheus metrics.
+
+    Always returns 200 - health is conveyed via the allgreen_up metric.
+    """
+    if environment is None:
+        environment = "development"
+
+    await anyio.to_thread.run_sync(load_config, config_path, environment)
+    results = await get_registry().run_all_async(environment)
+
+    return PlainTextResponse(
+        content=render_prometheus_metrics(results),
+        media_type=PROMETHEUS_CONTENT_TYPE,
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"},
+    )
 
 
 async def healthcheck_endpoint(
@@ -108,8 +139,8 @@ async def _healthcheck_handler(
     results = await registry.run_all_async(environment)
 
     # Calculate statistics and overall status
-    stats = _calculate_stats(results)
-    overall_status = _get_overall_status(stats)
+    stats = calculate_stats(results)
+    overall_status = get_overall_status(stats)
 
     # Determine response format
     wants_json = False
@@ -130,7 +161,7 @@ async def _healthcheck_handler(
 
     if wants_json:
         # Return JSON response
-        response_data = _format_json_response(
+        response_data = format_json_response(
             results, stats, overall_status, app_name, environment
         )
         return JSONResponse(
@@ -151,63 +182,6 @@ async def _healthcheck_handler(
         return HTMLResponse(
             content=html_content, status_code=status_code, headers=headers
         )
-
-
-def _calculate_stats(results):
-    """Calculate statistics from check results."""
-    stats = {"total": len(results), "passed": 0, "failed": 0, "skipped": 0, "error": 0}
-
-    for _, result in results:
-        if result.status == CheckStatus.PASSED:
-            stats["passed"] += 1
-        elif result.status == CheckStatus.FAILED:
-            stats["failed"] += 1
-        elif result.status == CheckStatus.SKIPPED:
-            stats["skipped"] += 1
-        elif result.status == CheckStatus.ERROR:
-            stats["error"] += 1
-
-    # Combine failed and error for simpler display
-    stats["failed"] += stats["error"]
-
-    return stats
-
-
-def _get_overall_status(stats):
-    """Determine overall health status."""
-    if stats["failed"] > 0:
-        return "failed"
-    elif stats["total"] == stats["skipped"]:
-        return "no_checks"
-    elif stats["passed"] > 0:
-        return "passed"
-    else:
-        return "unknown"
-
-
-def _format_json_response(results, stats, overall_status, app_name, environment):
-    """Format results for JSON response."""
-    json_results = []
-    for check, result in results:
-        json_results.append(
-            {
-                "description": check.description,
-                "status": result.status.value,
-                "message": result.message,
-                "error": result.error,
-                "duration_ms": result.duration_ms,
-                "skip_reason": result.skip_reason,
-            }
-        )
-
-    return {
-        "status": overall_status,
-        "stats": stats,
-        "environment": environment,
-        "app_name": app_name,
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "checks": json_results,
-    }
 
 
 def _render_html_template(context):

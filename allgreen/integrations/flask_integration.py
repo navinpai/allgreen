@@ -7,7 +7,9 @@ from flask import Blueprint, Flask, Response, jsonify, render_template, request
 import allgreen
 
 from ..config import load_config
-from ..core import Check, CheckResult, CheckStatus, get_registry
+from ..core import Check, CheckResult, get_registry
+from ..metrics import PROMETHEUS_CONTENT_TYPE, render_prometheus_metrics
+from ..reporting import calculate_stats, format_json_response, get_overall_status
 
 
 class HealthCheckApp:
@@ -48,44 +50,6 @@ class HealthCheckApp:
 
         return True
 
-    def _calculate_stats(
-        self, results: list[tuple[Check, CheckResult]]
-    ) -> dict[str, int]:
-        """Calculate statistics from check results."""
-        stats = {
-            "total": len(results),
-            "passed": 0,
-            "failed": 0,
-            "skipped": 0,
-            "error": 0,
-        }
-
-        for _, result in results:
-            if result.status == CheckStatus.PASSED:
-                stats["passed"] += 1
-            elif result.status == CheckStatus.FAILED:
-                stats["failed"] += 1
-            elif result.status == CheckStatus.SKIPPED:
-                stats["skipped"] += 1
-            elif result.status == CheckStatus.ERROR:
-                stats["error"] += 1
-
-        # Combine failed and error for simpler display
-        stats["failed"] += stats["error"]
-
-        return stats
-
-    def _get_overall_status(self, stats: dict[str, int]) -> str:
-        """Determine overall health status."""
-        if stats["failed"] > 0:
-            return "failed"
-        elif stats["total"] == stats["skipped"]:
-            return "no_checks"
-        elif stats["passed"] > 0:
-            return "passed"
-        else:
-            return "unknown"
-
     def run_health_checks(
         self,
     ) -> tuple[list[tuple[Check, CheckResult]], dict[str, Any]]:
@@ -98,8 +62,8 @@ class HealthCheckApp:
         results = registry.run_all(self.environment)
 
         # Calculate statistics
-        stats = self._calculate_stats(results)
-        overall_status = self._get_overall_status(stats)
+        stats = calculate_stats(results)
+        overall_status = get_overall_status(stats)
 
         metadata = {
             "stats": stats,
@@ -130,28 +94,13 @@ class HealthCheckApp:
         """Generate JSON health check response."""
         results, metadata = self.run_health_checks()
 
-        # Convert results to JSON-serializable format
-        json_results = []
-        for check, result in results:
-            json_results.append(
-                {
-                    "description": check.description,
-                    "status": result.status.value,
-                    "message": result.message,
-                    "error": result.error,
-                    "duration_ms": result.duration_ms,
-                    "skip_reason": result.skip_reason,
-                }
-            )
-
-        response_data = {
-            "status": metadata["overall_status"],
-            "stats": metadata["stats"],
-            "environment": metadata["environment"],
-            "app_name": metadata["app_name"],
-            "timestamp": metadata["timestamp"],
-            "checks": json_results,
-        }
+        response_data = format_json_response(
+            results,
+            metadata["stats"],
+            metadata["overall_status"],
+            self.app_name,
+            self.environment,
+        )
 
         # Determine HTTP status code
         status_code = 200 if metadata["overall_status"] == "passed" else 503
@@ -161,6 +110,16 @@ class HealthCheckApp:
 
         return response_data, status_code, headers
 
+    def metrics_text(self) -> tuple[str, int, dict[str, str]]:
+        """Generate Prometheus metrics response.
+
+        Always returns 200 - health is conveyed via the allgreen_up metric.
+        """
+        results, _ = self.run_health_checks()
+        text = render_prometheus_metrics(results)
+        headers = {"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"}
+        return text, 200, headers
+
 
 def create_healthcheck_blueprint(
     app_name: str = "Application",
@@ -168,8 +127,14 @@ def create_healthcheck_blueprint(
     environment: str | None = None,
     auto_reload_config: bool = True,
     url_prefix: str | None = None,
+    metrics_path: str | None = "/metrics",
 ) -> Blueprint:
-    """Create a Blueprint with health check endpoints."""
+    """Create a Blueprint with health check endpoints.
+
+    Args:
+        metrics_path: Route for the Prometheus metrics endpoint.
+            Set to None to disable it.
+    """
 
     # Create blueprint
     blueprint = Blueprint(
@@ -212,6 +177,18 @@ def create_healthcheck_blueprint(
         response.headers.update(headers)
         return response
 
+    if metrics_path:
+
+        @blueprint.route(metrics_path)
+        def metrics():
+            """Prometheus metrics endpoint."""
+            text, status_code, headers = health_checker.metrics_text()
+            response = Response(
+                text, status=status_code, content_type=PROMETHEUS_CONTENT_TYPE
+            )
+            response.headers.update(headers)
+            return response
+
     return blueprint
 
 
@@ -221,6 +198,7 @@ def create_app(
     environment: str | None = None,
     auto_reload_config: bool = True,
     flask_app: Flask | None = None,
+    metrics_path: str | None = "/metrics",
 ) -> Flask:
     """Create and configure a Flask app with health check endpoints."""
 
@@ -238,6 +216,7 @@ def create_app(
         config_path=config_path,
         environment=environment,
         auto_reload_config=auto_reload_config,
+        metrics_path=metrics_path,
     )
     flask_app.register_blueprint(blueprint)
 
@@ -251,6 +230,7 @@ def mount_healthcheck(
     environment: str | None = None,
     auto_reload_config: bool = True,
     url_prefix: str | None = None,
+    metrics_path: str | None = "/metrics",
 ) -> Flask:
     """Mount health check routes on an existing Flask app."""
 
@@ -261,6 +241,7 @@ def mount_healthcheck(
         environment=environment,
         auto_reload_config=auto_reload_config,
         url_prefix=url_prefix,
+        metrics_path=metrics_path,
     )
     app.register_blueprint(blueprint)
 

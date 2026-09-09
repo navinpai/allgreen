@@ -208,3 +208,92 @@ def sync_check():
 
     finally:
         os.unlink(config_path)
+
+
+def test_metrics_endpoint():
+    get_registry().clear()
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+        f.write("""
+@check("Metrics passing check")
+def pass_check():
+    make_sure(True)
+
+@check("Metrics failing check")
+def fail_check():
+    make_sure(False)
+""")
+        config_path = f.name
+
+    try:
+        app = create_app(
+            config_path=config_path, environment="test", auto_reload_config=False
+        )
+        client = app.test_client()
+
+        response = client.get("/metrics")
+        assert response.status_code == 200
+        assert response.content_type.startswith("text/plain")
+
+        text = response.get_data(as_text=True)
+        assert "allgreen_up 0" in text
+        assert 'allgreen_check_status{check="Metrics passing check"} 1' in text
+        assert 'allgreen_check_status{check="Metrics failing check"} 0' in text
+
+    finally:
+        os.unlink(config_path)
+
+
+def test_metrics_custom_path():
+    get_registry().clear()
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+        f.write("""
+@check("Custom path check")
+def pass_check():
+    make_sure(True)
+""")
+        config_path = f.name
+
+    try:
+        app = create_app(
+            config_path=config_path,
+            environment="test",
+            auto_reload_config=False,
+            metrics_path="/prometheus",
+        )
+        client = app.test_client()
+
+        assert client.get("/metrics").status_code == 404
+        response = client.get("/prometheus")
+        assert response.status_code == 200
+        assert "allgreen_up 1" in response.get_data(as_text=True)
+
+    finally:
+        os.unlink(config_path)
+
+
+def test_metrics_disabled():
+    get_registry().clear()
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+        f.write("""
+@check("No metrics check")
+def pass_check():
+    make_sure(True)
+""")
+        config_path = f.name
+
+    try:
+        app = create_app(
+            config_path=config_path,
+            environment="test",
+            auto_reload_config=False,
+            metrics_path=None,
+        )
+        client = app.test_client()
+
+        assert client.get("/metrics").status_code == 404
+
+    finally:
+        os.unlink(config_path)
