@@ -180,6 +180,9 @@ def external_service_check():
     make_sure(response.ok)
 ```
 
+- Default timeout is 10 seconds; float values like `timeout=0.5` are supported
+- `timeout=0` disables timeout enforcement for that check
+
 ### Rate Limiting for Expensive Operations
 
 ```python

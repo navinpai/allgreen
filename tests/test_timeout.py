@@ -42,7 +42,7 @@ class TestTimeoutFunctionality:
         result = check_obj.execute()
 
         assert result.status == CheckStatus.ERROR
-        assert "timed out after 1 seconds" in result.error
+        assert "timed out after 1.0 seconds" in result.error
         assert result.message == "Check timed out"
         assert result.duration_ms is not None
 
@@ -155,11 +155,33 @@ class TestTimeoutFunctionality:
         registry = get_registry()
         registry.clear()
 
-        # Zero timeout should default to something reasonable
+        # An explicit zero timeout disables timeout enforcement
         @check("Zero timeout check", timeout=0)
         def zero_timeout_check():
             make_sure(True)
 
         check_obj = registry.get_checks()[0]
-        # Zero timeout should be converted to default
-        assert check_obj.timeout == 10  # Default timeout
+        assert check_obj.timeout == 0
+        result = check_obj.execute()
+        assert result.status == CheckStatus.PASSED
+
+    def test_float_timeout_not_truncated(self):
+        """Sub-second/float timeouts should be enforced, not truncated to int."""
+        registry = get_registry()
+        registry.clear()
+
+        @check("Float timeout check", timeout=0.5)
+        def float_timeout_check():
+            time.sleep(2)
+            make_sure(True)
+
+        check_obj = registry.get_checks()[0]
+        assert check_obj.timeout == 0.5
+
+        start = time.time()
+        result = check_obj.execute()
+        elapsed = time.time() - start
+
+        assert result.status == CheckStatus.ERROR
+        assert "timed out after 0.5 seconds" in result.error
+        assert elapsed < 1.5  # Would be ~1s+ if truncated to int / rounded up

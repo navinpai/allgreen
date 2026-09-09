@@ -86,7 +86,7 @@ def execute_with_robust_timeout(func: Callable, timeout_seconds: float) -> Any:
     is_main_thread = threading.current_thread() is threading.main_thread()
     if hasattr(signal, "SIGALRM") and is_main_thread and timeout_seconds >= 0.1:
         # Signal-based timeout for quick execution in main thread
-        with timeout_context(int(timeout_seconds) or 1):
+        with timeout_context(timeout_seconds):
             return func()
     else:
         # Worker thread with hard timeout for robust interruption
@@ -171,22 +171,23 @@ async def execute_with_async_timeout(func: Callable, timeout_seconds: float) -> 
 
 
 @contextmanager
-def timeout_context(seconds: int):
+def timeout_context(seconds: float):
     """Context manager for timing out function execution."""
     # Check if we're in the main thread and signals are available
     is_main_thread = threading.current_thread() is threading.main_thread()
 
     if hasattr(signal, "SIGALRM") and is_main_thread:
-        # Unix systems in main thread - use signals (more reliable)
+        # Unix systems in main thread - use signals (more reliable).
+        # setitimer supports sub-second/float timeouts, unlike alarm().
         def timeout_handler(signum, frame):
-            raise CheckTimeoutError(f"Check timed out after {seconds} seconds")
+            raise CheckTimeoutError(f"Check timed out after {seconds:.1f} seconds")
 
         old_handler = signal.signal(signal.SIGALRM, timeout_handler)
-        signal.alarm(seconds)
+        signal.setitimer(signal.ITIMER_REAL, seconds)
         try:
             yield
         finally:
-            signal.alarm(0)
+            signal.setitimer(signal.ITIMER_REAL, 0)
             signal.signal(signal.SIGALRM, old_handler)
     else:
         # Threading-based timeout (works in all threads and systems)
@@ -243,7 +244,7 @@ class Check:
         self,
         description: str,
         func: Callable[[], Any],
-        timeout: int | None = None,
+        timeout: int | float | None = None,
         only_in: str | list[str] | None = None,
         except_in: str | list[str] | None = None,
         if_condition: bool | Callable[[], bool] | None = None,
@@ -251,7 +252,8 @@ class Check:
     ):
         self.description = description
         self.func = func
-        self.timeout = timeout or 10  # Default 10 second timeout
+        # Default 10 seconds; an explicit 0 (or negative) disables the timeout
+        self.timeout = 10 if timeout is None else timeout
         self.only_in = self._normalize_env_list(only_in)
         self.except_in = self._normalize_env_list(except_in)
         self.if_condition = if_condition
@@ -563,7 +565,7 @@ _registry = CheckRegistry()
 
 def check(
     description: str,
-    timeout: int | None = None,
+    timeout: int | float | None = None,
     only_in: str | list[str] | None = None,
     except_in: str | list[str] | None = None,
     if_condition: bool | Callable[[], bool] | None = None,
