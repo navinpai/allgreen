@@ -234,6 +234,44 @@ class Expectation:
                 f"Expected {self.actual!r} to be less than {expected!r}"
             )
 
+    def to_be_between(self, minimum: int | float, maximum: int | float) -> None:
+        """Assert the value is within [minimum, maximum], inclusive."""
+        if not (
+            isinstance(self.actual, (int, float)) and minimum <= self.actual <= maximum
+        ):
+            raise CheckAssertionError(
+                f"Expected {self.actual!r} to be between {minimum!r} and {maximum!r}"
+            )
+
+    def _contains(self, expected: Any) -> bool:
+        try:
+            return expected in self.actual
+        except TypeError:
+            raise CheckAssertionError(
+                f"Expected {self.actual!r} to be a container, but it does not "
+                f"support membership tests"
+            ) from None
+
+    def to_contain(self, expected: Any) -> None:
+        if not self._contains(expected):
+            raise CheckAssertionError(
+                f"Expected {self.actual!r} to contain {expected!r}"
+            )
+
+    def not_to_contain(self, expected: Any) -> None:
+        if self._contains(expected):
+            raise CheckAssertionError(
+                f"Expected {self.actual!r} not to contain {expected!r}"
+            )
+
+    def to_be_none(self) -> None:
+        if self.actual is not None:
+            raise CheckAssertionError(f"Expected {self.actual!r} to be None")
+
+    def not_to_be_none(self) -> None:
+        if self.actual is None:
+            raise CheckAssertionError("Expected value not to be None")
+
 
 def expect(actual: Any) -> Expectation:
     return Expectation(actual)

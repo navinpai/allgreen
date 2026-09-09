@@ -64,6 +64,60 @@ def test_expectation_methods():
         expect(10).to_be_less_than(5)
 
 
+def test_to_be_between():
+    expect(5).to_be_between(1, 10)
+    expect(1).to_be_between(1, 10)  # inclusive lower bound
+    expect(10).to_be_between(1, 10)  # inclusive upper bound
+    expect(2.5).to_be_between(2, 3)
+
+    with pytest.raises(CheckAssertionError, match="to be between 1 and 10"):
+        expect(11).to_be_between(1, 10)
+    with pytest.raises(CheckAssertionError):
+        expect(0).to_be_between(1, 10)
+    with pytest.raises(CheckAssertionError):
+        expect("5").to_be_between(1, 10)
+
+
+def test_to_contain():
+    expect([1, 2, 3]).to_contain(2)
+    expect("hello world").to_contain("world")
+    expect({"key": "value"}).to_contain("key")
+    expect({1, 2, 3}).to_contain(3)
+
+    with pytest.raises(CheckAssertionError, match="to contain 4"):
+        expect([1, 2, 3]).to_contain(4)
+    with pytest.raises(CheckAssertionError, match="does not support membership"):
+        expect(42).to_contain(4)
+
+
+def test_not_to_contain():
+    expect([1, 2, 3]).not_to_contain(4)
+    expect("hello").not_to_contain("bye")
+
+    with pytest.raises(CheckAssertionError, match="not to contain 2"):
+        expect([1, 2, 3]).not_to_contain(2)
+    with pytest.raises(CheckAssertionError, match="does not support membership"):
+        expect(42).not_to_contain(4)
+
+
+def test_to_be_none():
+    expect(None).to_be_none()
+
+    with pytest.raises(CheckAssertionError, match="to be None"):
+        expect(5).to_be_none()
+    with pytest.raises(CheckAssertionError):
+        expect(False).to_be_none()
+
+
+def test_not_to_be_none():
+    expect(5).not_to_be_none()
+    expect(False).not_to_be_none()
+    expect("").not_to_be_none()
+
+    with pytest.raises(CheckAssertionError, match="not to be None"):
+        expect(None).not_to_be_none()
+
+
 def test_check_with_expectations():
     registry = get_registry()
     registry.clear()

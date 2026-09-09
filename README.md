@@ -145,6 +145,15 @@ def math_check():
     expect(2 + 2).to_eq(4)
     expect(api.response_time()).to_be_less_than(100)
     expect(database.connection_count()).to_be_greater_than(0)
+    expect(cpu_usage_percent).to_be_between(0, 95)  # inclusive bounds
+
+
+@check("Membership and presence")
+def membership_check():
+    expect(enabled_features).to_contain("healthcheck")
+    expect(response.headers).not_to_contain("X-Debug")
+    expect(shutdown_reason).to_be_none()
+    expect(get_config()).not_to_be_none()
 ```
 
 ## Advanced Features
