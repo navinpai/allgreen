@@ -18,6 +18,8 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 dependencies = []
 
@@ -38,8 +40,12 @@ dev = [
     "pytest>=7.0.0",
     "pytest-cov",
     "ruff",
+    "mypy",
     "flask>=2.0.0",  # For testing
     "jinja2>=3.0.0",
+    "django>=3.2",  # For integration tests
+    "fastapi>=0.68.0",
+    "httpx",  # Required by FastAPI TestClient
 ]
 
 [project.urls]
@@ -78,6 +84,13 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*" = ["E501"]
 "examples/**/*" = ["F821"]  # Config files have DSL functions injected at runtime
+
+[tool.mypy]
+python_version = "3.10"
+files = ["allgreen"]
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
