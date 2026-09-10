@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "allgreen"
-version = "1.0.0"
+version = "1.0.1"
 description = "Simple, beautiful health checks for Python applications"
 authors = [{name = "Navin Pai", email = "lifeofnavin@gmail.com"}]
 license = {text = "MIT"}
