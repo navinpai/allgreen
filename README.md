@@ -1,9 +1,15 @@
-# ✅ Allgreen - Python Health Checks Made Simple
+<h1 align="center">✅ Allgreen</h1>
 
-[![PyPI](https://img.shields.io/pypi/v/allgreen)](https://pypi.org/project/allgreen/)
-[![Python versions](https://img.shields.io/pypi/pyversions/allgreen)](https://pypi.org/project/allgreen/)
-[![CI](https://github.com/navinpai/allgreen/actions/workflows/ci.yml/badge.svg)](https://github.com/navinpai/allgreen/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+<p align="center"><strong>Python health checks made simple.</strong></p>
+
+<p align="center">
+  <a href="https://pypi.org/project/allgreen/"><img src="https://img.shields.io/pypi/v/allgreen" alt="PyPI"></a>
+  <a href="https://pypi.org/project/allgreen/"><img src="https://img.shields.io/pypi/pyversions/allgreen" alt="Python versions"></a>
+  <a href="https://github.com/navinpai/allgreen/actions/workflows/ci.yml"><img src="https://github.com/navinpai/allgreen/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+</p>
+
+---
 
 Add quick, simple, and beautiful health checks to your Python application via a `/healthcheck` endpoint.
 
