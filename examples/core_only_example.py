@@ -13,6 +13,7 @@ Run:
 """
 
 import json
+import os
 
 from allgreen import check, expect, get_registry, load_config, make_sure
 
@@ -37,8 +38,6 @@ def math_check():
 
 @check("Environment variables accessible")
 def env_check():
-    import os
-
     make_sure("PATH" in os.environ, "PATH should be set")
 
 

@@ -1,6 +1,8 @@
 # Sample allgreen_config.py configuration file
 # This demonstrates various types of health checks
 
+import os
+
 
 @check("Basic truth check")
 def basic_check():
@@ -16,8 +18,6 @@ def math_check():
 
 @check("Environment variables are accessible")
 def env_check():
-    import os
-
     make_sure("PATH" in os.environ, "PATH environment variable should exist")
 
 

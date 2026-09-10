@@ -21,6 +21,7 @@ if not settings.configured:
     )
     django.setup()
 
+from django.template.loader import render_to_string  # noqa: E402
 from django.test import RequestFactory  # noqa: E402
 
 from allgreen import get_registry  # noqa: E402
@@ -230,8 +231,6 @@ def fail_check():
 
 def test_template_discovery():
     """Django's app template loader should find allgreen/healthcheck.html."""
-    from django.template.loader import render_to_string
-
     context = {
         "results": [],
         "stats": {"total": 0, "passed": 0, "failed": 0, "skipped": 0},

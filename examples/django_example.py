@@ -19,6 +19,12 @@ Run:
 
 import os
 
+import django
+from django.conf import settings
+from django.core.management import execute_from_command_line
+from django.http import HttpResponse
+from django.urls import path
+
 # Minimal Django setup for this example
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "__main__")
 
@@ -47,12 +53,6 @@ TEMPLATES = [
 ]
 
 if __name__ == "__main__":
-    import django
-    from django.conf import settings
-    from django.core.management import execute_from_command_line
-    from django.http import HttpResponse
-    from django.urls import path
-
     # Configure Django
     settings.configure(
         DEBUG=DEBUG,
