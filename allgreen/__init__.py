@@ -13,7 +13,7 @@ from .core import (
     make_sure,
 )
 
-__version__ = "1.0.1"
+__version__ = "1.1.0"
 
 # Core exports (always available)
 __all__ = [
