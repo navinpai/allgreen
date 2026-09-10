@@ -517,7 +517,7 @@ ruff format --check .
 mypy
 
 # Start example server
-python test_server.py
+python examples/run_server.py
 ```
 
 ## Contributing
