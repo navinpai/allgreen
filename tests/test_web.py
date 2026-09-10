@@ -237,8 +237,8 @@ def fail_check():
 
         text = response.get_data(as_text=True)
         assert "allgreen_up 0" in text
-        assert 'allgreen_check_status{check="Metrics passing check"} 1' in text
-        assert 'allgreen_check_status{check="Metrics failing check"} 0' in text
+        assert 'allgreen_check_status{check="pass_check"} 1' in text
+        assert 'allgreen_check_status{check="fail_check"} 0' in text
 
     finally:
         os.unlink(config_path)

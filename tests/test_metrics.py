@@ -82,6 +82,26 @@ def test_label_escaping():
     assert 'allgreen_check_status{check="Says \\"hello\\""} 1' in output
 
 
+def test_label_uses_check_name_over_description():
+    def db_ping():
+        pass
+
+    results = [
+        (Check("Simulated database ping", db_ping), CheckResult(CheckStatus.PASSED)),
+        (
+            Check("Payment gateway reachable", lambda: None, name="stripe"),
+            CheckResult(CheckStatus.PASSED),
+        ),
+    ]
+
+    output = render_prometheus_metrics(results)
+
+    assert 'allgreen_check_status{check="db_ping"} 1' in output
+    assert 'allgreen_check_status{check="stripe"} 1' in output
+    assert "Simulated database ping" not in output
+    assert "Payment gateway reachable" not in output
+
+
 def test_help_and_type_lines():
     results = [(_check("A"), CheckResult(CheckStatus.PASSED, duration_ms=1.0))]
 

@@ -8,6 +8,7 @@ from allgreen import (
     get_registry,
     make_sure,
 )
+from allgreen.core import Check
 
 
 def test_basic_check_passing():
@@ -28,6 +29,27 @@ def test_basic_check_passing():
     assert result.passed
     assert result.status == CheckStatus.PASSED
     assert "Check passed" in result.message
+
+
+def test_check_name_resolution():
+    registry = get_registry()
+    registry.clear()
+
+    @check("Database is reachable")
+    def db_ping():
+        make_sure(True)
+
+    @check("Payment gateway reachable", name="stripe")
+    def gateway_check():
+        make_sure(True)
+
+    checks = registry.get_checks()
+    assert checks[0].name == "db_ping"
+    assert checks[0].description == "Database is reachable"
+    assert checks[1].name == "stripe"
+
+    lambda_check = Check("Lambda fallback", lambda: None)
+    assert lambda_check.name == "Lambda fallback"
 
 
 def test_basic_check_failing():

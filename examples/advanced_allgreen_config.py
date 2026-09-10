@@ -12,6 +12,13 @@ def basic_check():
     make_sure(True, "System is operational")
 
 
+# name= sets the stable identifier used in metric labels and JSON output;
+# when omitted, the function name is used
+@check("Primary database connection is healthy", name="db_primary")
+def named_check():
+    make_sure(True, "Database is reachable")
+
+
 @check("Quick timeout test", timeout=2)
 def timeout_test():
     # This should complete within 2 seconds

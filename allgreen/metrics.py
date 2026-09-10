@@ -48,7 +48,7 @@ def render_prometheus_metrics(results: list[tuple[Check, CheckResult]]) -> str:
     status_lines = []
     duration_lines = []
     for check, result in results:
-        label = _escape_label_value(check.description)
+        label = _escape_label_value(check.name)
 
         if result.status == CheckStatus.PASSED:
             status_lines.append(f'allgreen_check_status{{check="{label}"}} 1')

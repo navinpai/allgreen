@@ -302,9 +302,16 @@ class Check:
         except_in: str | list[str] | None = None,
         if_condition: bool | Callable[[], bool] | None = None,
         run: str | None = None,
+        name: str | None = None,
     ):
         self.description = description
         self.func = func
+        # Stable identifier for metric labels; renaming the human-readable
+        # description won't change time series identity
+        func_name = getattr(func, "__name__", None)
+        if func_name == "<lambda>":
+            func_name = None
+        self.name = name or func_name or description
         # Default 10 seconds; an explicit 0 (or negative) disables the timeout
         self.timeout = 10 if timeout is None else timeout
         self.only_in = self._normalize_env_list(only_in)
@@ -652,6 +659,7 @@ def check(
     except_in: str | list[str] | None = None,
     if_condition: bool | Callable[[], bool] | None = None,
     run: str | None = None,
+    name: str | None = None,
 ):
     def decorator(func: Callable[[], Any]) -> Callable[[], Any]:
         check_obj = Check(
@@ -662,6 +670,7 @@ def check(
             except_in=except_in,
             if_condition=if_condition,
             run=run,
+            name=name,
         )
         _registry.register(check_obj)
         return func

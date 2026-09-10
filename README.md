@@ -273,6 +273,7 @@ Access `/healthcheck.json` or `/healthcheck?format=json` for machine-readable ou
   },
   "checks": [
     {
+      "name": "db_connection",
       "description": "Database connection",
       "status": "passed",
       "duration_ms": 23.4
@@ -309,14 +310,24 @@ allgreen_checks{status="skipped"} 1
 allgreen_checks{status="error"} 0
 # HELP allgreen_check_status Health check result (1 = passed, 0 = failed)
 # TYPE allgreen_check_status gauge
-allgreen_check_status{check="Database connection"} 1
+allgreen_check_status{check="db_connection"} 1
 # HELP allgreen_check_duration_seconds Health check execution time
 # TYPE allgreen_check_duration_seconds gauge
-allgreen_check_duration_seconds{check="Database connection"} 0.023400
+allgreen_check_duration_seconds{check="db_connection"} 0.023400
 ```
 
 The endpoint always returns **200** - overall health is conveyed via the
 `allgreen_up` metric so Prometheus can keep scraping even when checks fail.
+
+The `check` label uses a stable identifier rather than the human-readable
+description, so rewording a description never changes time series identity.
+By default it is the decorated function's name; override it with `name=`:
+
+```python
+@check("Database connection is healthy", name="db_primary")
+def db_connection():
+    make_sure(db.ping())
+```
 
 Customize or disable the route with `metrics_path`:
 

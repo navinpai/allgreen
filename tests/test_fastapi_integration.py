@@ -195,8 +195,8 @@ def fail_check():
         assert response.status_code == 200
         assert response.headers["content-type"].startswith("text/plain")
         assert "allgreen_up 0" in response.text
-        assert 'allgreen_check_status{check="Metrics passing check"} 1' in response.text
-        assert 'allgreen_check_status{check="Metrics failing check"} 0' in response.text
+        assert 'allgreen_check_status{check="pass_check"} 1' in response.text
+        assert 'allgreen_check_status{check="fail_check"} 0' in response.text
     finally:
         os.unlink(config_path)
 

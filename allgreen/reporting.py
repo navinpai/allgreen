@@ -64,6 +64,7 @@ def format_json_response(
     for check, result in results:
         json_results.append(
             {
+                "name": check.name,
                 "description": check.description,
                 "status": result.status.value,
                 "message": result.message,
